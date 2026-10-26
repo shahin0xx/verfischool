@@ -1,0 +1,1032 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}گزارش حضور و غیاب - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}گزارش حضور و غیاب{% endblock %}
+{% block page_subtitle %}مدیریت و تحلیل حضور و غیاب دانش‌آموزان{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-container {
+        margin-bottom: 30px;
+    }
+    
+    .filters-panel {
+        padding: 25px;
+        border-radius: var(--radius);
+        margin-bottom: 30px;
+    }
+    
+    .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-group {
+        margin-bottom: 0;
+    }
+    
+    .filter-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+    
+    .filter-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .filter-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+    }
+    
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .summary-card {
+        padding: 25px;
+        border-radius: var(--radius);
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .summary-card.total {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.2));
+        border: 2px solid var(--primary);
+    }
+    
+    .summary-card.students {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.1), rgba(76, 201, 240, 0.2));
+        border: 2px solid var(--success);
+    }
+    
+    .summary-card.days {
+        background: linear-gradient(135deg, rgba(248, 150, 30, 0.1), rgba(248, 150, 30, 0.2));
+        border: 2px solid var(--warning);
+    }
+    
+    .summary-card.cameras {
+        background: linear-gradient(135deg, rgba(247, 37, 133, 0.1), rgba(247, 37, 133, 0.2));
+        border: 2px solid var(--secondary);
+    }
+    
+    .summary-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .summary-card.total .summary-icon {
+        color: var(--primary);
+    }
+    
+    .summary-card.students .summary-icon {
+        color: var(--success);
+    }
+    
+    .summary-card.days .summary-icon {
+        color: var(--warning);
+    }
+    
+    .summary-card.cameras .summary-icon {
+        color: var(--secondary);
+    }
+    
+    .summary-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .summary-label {
+        font-size: 1rem;
+        color: var(--dark);
+        font-weight: 600;
+    }
+    
+    .report-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+        margin-bottom: 20px;
+    }
+    
+    .btn-export {
+        background: linear-gradient(135deg, var(--success), #00b4d8);
+        color: white;
+    }
+    
+    .btn-export:hover {
+        background: linear-gradient(135deg, #00b4d8, var(--success));
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(76, 201, 240, 0.3);
+    }
+    
+    .attendance-table-container {
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .table-header {
+        padding: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .table-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .table-search {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        width: 200px;
+    }
+    
+    .table-search::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .table-search:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .attendance-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .attendance-table th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--dark);
+        background: #f8f9fa;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .attendance-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .attendance-table tr:hover {
+        background: rgba(67, 97, 238, 0.05);
+    }
+    
+    .student-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .student-photo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--primary);
+    }
+    
+    .student-details h6 {
+        margin-bottom: 3px;
+        color: var(--dark);
+    }
+    
+    .student-details p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--gray);
+    }
+    
+    .confidence-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .high-confidence {
+        background: rgba(76, 201, 240, 0.2);
+        color: var(--success);
+    }
+    
+    .medium-confidence {
+        background: rgba(248, 150, 30, 0.2);
+        color: var(--warning);
+    }
+    
+    .low-confidence {
+        background: rgba(249, 65, 68, 0.2);
+        color: var(--danger);
+    }
+    
+    .table-footer {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .pagination {
+        display: flex;
+        gap: 5px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .page-item {
+        display: inline-block;
+    }
+    
+    .page-link {
+        padding: 8px 12px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 6px;
+        color: var(--primary);
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .page-link:hover {
+        background: rgba(67, 97, 238, 0.1);
+        border-color: var(--primary);
+    }
+    
+    .page-item.active .page-link {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    .chart-container {
+        padding: 25px;
+        border-radius: var(--radius);
+        margin-top: 30px;
+    }
+    
+    .chart-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        color: var(--dark);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: var(--gray);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
+    
+    .export-modal {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+    
+    .export-modal-content {
+        width: 90%;
+        max-width: 500px;
+        background: white;
+        border-radius: var(--radius);
+        overflow: hidden;
+    }
+    
+    .export-modal-header {
+        padding: 20px;
+        background: linear-gradient(135deg, var(--success), #00b4d8);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .export-modal-body {
+        padding: 20px;
+    }
+    
+    .export-options {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .export-option {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .export-option:hover {
+        border-color: var(--success);
+        background: rgba(76, 201, 240, 0.05);
+    }
+    
+    .export-option i {
+        font-size: 1.5rem;
+        color: var(--success);
+    }
+    
+    .export-option-content h6 {
+        margin-bottom: 5px;
+        color: var(--dark);
+    }
+    
+    .export-option-content p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--gray);
+    }
+    
+    @media (max-width: 768px) {
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .filter-actions, .report-actions {
+            flex-direction: column;
+        }
+        
+        .filter-actions .btn, .report-actions .btn {
+            width: 100%;
+        }
+        
+        .table-header {
+            flex-direction: column;
+            gap: 15px;
+            align-items: stretch;
+        }
+        
+        .table-actions {
+            justify-content: space-between;
+        }
+        
+        .table-search {
+            width: 100%;
+        }
+        
+        .student-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        
+        .student-photo {
+            width: 30px;
+            height: 30px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="filters-panel glass animate__animated animate__fadeIn">
+        <div class="filter-header">
+            <h4 class="mb-0">
+                <i class="fas fa-filter text-primary me-2"></i>
+                فیلترهای گزارش
+            </h4>
+            <button class="btn btn-sm btn-outline-primary" onclick="resetFilters()">
+                <i class="fas fa-redo"></i>
+                بازنشانی فیلترها
+            </button>
+        </div>
+        
+        <form method="GET" action="{% url 'verifi:attendance_report' %}" id="filterForm">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label class="filter-label">کلاس</label>
+                    <select class="filter-control" name="classroom" id="classroomFilter">
+                        <option value="">همه کلاس‌ها</option>
+                        {% for classroom in classrooms %}
+                        <option value="{{ classroom.id }}" {% if selected_classroom == classroom.id|stringformat:"s" %}selected{% endif %}>
+                            {{ classroom.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">دانش‌آموز</label>
+                    <select class="filter-control" name="student" id="studentFilter">
+                        <option value="">همه دانش‌آموزان</option>
+                        {% for student in students %}
+                        <option value="{{ student.id }}" {% if selected_student == student.id|stringformat:"s" %}selected{% endif %}>
+                            {{ student.full_name }} ({{ student.student_id }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">از تاریخ</label>
+                    <input type="date" class="filter-control" name="start_date" id="startDateFilter" value="{{ start_date }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">تا تاریخ</label>
+                    <input type="date" class="filter-control" name="end_date" id="endDateFilter" value="{{ end_date }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">دوربین</label>
+                    <select class="filter-control" name="camera" id="cameraFilter">
+                        <option value="">همه دوربین‌ها</option>
+                        {% for camera in cameras %}
+                        <option value="{{ camera.id }}" {% if selected_camera == camera.id|stringformat:"s" %}selected{% endif %}>
+                            {{ camera.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">حداقل دقت</label>
+                    <select class="filter-control" name="min_confidence" id="confidenceFilter">
+                        <option value="">همه</option>
+                        <option value="0.8">بالا (80% به بالا)</option>
+                        <option value="0.6">متوسط (60% به بالا)</option>
+                        <option value="0">پایین (همه)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                    اعمال فیلترها
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="showExportModal()">
+                    <i class="fas fa-download"></i>
+                    خروجی گزارش
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="summary-cards">
+        <div class="summary-card total glass animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
+            <i class="fas fa-calendar-check summary-icon"></i>
+            <div class="summary-number">{{ total_attendances }}</div>
+            <div class="summary-label">کل حضورها</div>
+        </div>
+        
+        <div class="summary-card students glass animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+            <i class="fas fa-users summary-icon"></i>
+            <div class="summary-number">{{ unique_students }}</div>
+            <div class="summary-label">دانش‌آموز منحصر به فرد</div>
+        </div>
+        
+        <div class="summary-card days glass animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+            <i class="fas fa-calendar-alt summary-icon"></i>
+            <div class="summary-number">{{ unique_dates }}</div>
+            <div class="summary-label">روز منحصر به فرد</div>
+        </div>
+        
+        <div class="summary-card cameras glass animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+            <i class="fas fa-camera summary-icon"></i>
+            <div class="summary-number">{{ unique_cameras }}</div>
+            <div class="summary-label">دوربین منحصر به فرد</div>
+        </div>
+    </div>
+    
+    <div class="report-actions">
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" onclick="toggleDailyStats()">
+                <i class="fas fa-chart-bar me-2"></i>
+                آمار روزانه
+            </button>
+            <button class="btn btn-sm btn-outline-success" onclick="toggleClassStats()">
+                <i class="fas fa-school me-2"></i>
+                آمار کلاسی
+            </button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="printReport()">
+                <i class="fas fa-print me-2"></i>
+                چاپ گزارش
+            </button>
+        </div>
+    </div>
+    
+    <div class="attendance-table-container glass animate__animated animate__fadeIn">
+        <div class="table-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                لیست حضورها
+                <small class="opacity-75">({{ page_obj.paginator.count }} رکورد)</small>
+            </h5>
+            <div class="table-actions">
+                <input type="text" class="table-search" placeholder="جستجو در نتایج..." id="tableSearch">
+                <select class="filter-control" id="rowsPerPage" style="width: auto; padding: 5px 10px;">
+                    <option value="10">10 سطر</option>
+                    <option value="25" selected>25 سطر</option>
+                    <option value="50">50 سطر</option>
+                    <option value="100">100 سطر</option>
+                </select>
+            </div>
+        </div>
+        
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="attendance-table" id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>دانش‌آموز</th>
+                        <th>کلاس</th>
+                        <th>دوربین</th>
+                        <th>تاریخ</th>
+                        <th>زمان</th>
+                        <th>دقت تشخیص</th>
+                        <th>توضیحات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in page_obj %}
+                    <tr>
+                        <td>
+                            <div class="student-info">
+                                {% if attendance.student.photo %}
+                                <img src="{{ attendance.student.photo.url }}" alt="{{ attendance.student.full_name }}" class="student-photo">
+                                {% else %}
+                                <div class="student-photo bg-light d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-muted" style="font-size: 0.8rem;"></i>
+                                </div>
+                                {% endif %}
+                                <div class="student-details">
+                                    <h6>{{ attendance.student.full_name }}</h6>
+                                    <p>{{ attendance.student.student_id }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ attendance.student.classroom.name|default:"-" }}</td>
+                        <td>{{ attendance.camera.name }}</td>
+                        <td>{{ attendance.date|date:"Y/m/d" }}</td>
+                        <td>{{ attendance.time|time:"H:i" }}</td>
+                        <td>
+                            <span class="confidence-badge 
+                                {% if attendance.confidence >= 0.8 %}high-confidence
+                                {% elif attendance.confidence >= 0.6 %}medium-confidence
+                                {% else %}low-confidence{% endif %}">
+                                {{ attendance.confidence|floatformat:1 }}%
+                            </span>
+                        </td>
+                        <td>{{ attendance.notes|default:"-"|truncatechars:30 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="table-footer">
+            <div>
+                <small class="text-muted">
+                    نمایش {{ page_obj.start_index }} تا {{ page_obj.end_index }} از {{ page_obj.paginator.count }} رکورد
+                </small>
+            </div>
+            <nav>
+                <ul class="pagination mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% else %}
+        <div class="empty-state py-5">
+            <i class="fas fa-search"></i>
+            <h5>هیچ رکوردی یافت نشد</h5>
+            <p class="text-muted">با تغییر فیلترها می‌توانید نتایج جدیدی مشاهده کنید.</p>
+            <button class="btn btn-primary mt-3" onclick="resetFilters()">
+                <i class="fas fa-redo me-2"></i>
+                بازنشانی فیلترها
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- آمار روزانه (مخفی شده) -->
+    <div class="chart-container glass" id="dailyStats" style="display: none;">
+        <h5 class="chart-title">
+            <i class="fas fa-chart-line text-primary"></i>
+            آمار روزانه حضور (30 روز اخیر)
+        </h5>
+        <canvas id="dailyChart"></canvas>
+    </div>
+    
+    <!-- آمار کلاسی (مخفی شده) -->
+    <div class="chart-container glass" id="classStats" style="display: none;">
+        <h5 class="chart-title">
+            <i class="fas fa-school text-success"></i>
+            آمار حضور بر اساس کلاس
+        </h5>
+        <canvas id="classChart"></canvas>
+    </div>
+</div>
+
+<!-- Modal برای خروجی گزارش -->
+<div class="export-modal" id="exportModal">
+    <div class="export-modal-content glass">
+        <div class="export-modal-header">
+            <h4 class="mb-0">
+                <i class="fas fa-download me-2"></i>
+                خروجی گزارش
+            </h4>
+            <button class="btn btn-light btn-sm" onclick="closeExportModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="export-modal-body">
+            <p class="mb-3">قالب مورد نظر برای خروجی گزارش را انتخاب کنید:</p>
+            <div class="export-options">
+                <div class="export-option" onclick="exportReport('excel')">
+                    <i class="fas fa-file-excel"></i>
+                    <div class="export-option-content">
+                        <h6>Excel (XLSX)</h6>
+                        <p>مناسب برای ویرایش و تحلیل در Excel</p>
+                    </div>
+                </div>
+                <div class="export-option" onclick="exportReport('csv')">
+                    <i class="fas fa-file-csv"></i>
+                    <div class="export-option-content">
+                        <h6>CSV</h6>
+                        <p>قالب متنی ساده، مناسب برای برنامه‌های دیگر</p>
+                    </div>
+                </div>
+                <div class="export-option" onclick="exportReport('pdf')">
+                    <i class="fas fa-file-pdf"></i>
+                    <div class="export-option-content">
+                        <h6>PDF</h6>
+                        <p>مناسب برای چاپ و اشتراک‌گذاری</p>
+                    </div>
+                </div>
+                <div class="export-option" onclick="exportReport('print')">
+                    <i class="fas fa-print"></i>
+                    <div class="export-option-content">
+                        <h6>چاپ مستقیم</h6>
+                        <p>پرینت گزارش با فرمت‌بندی مناسب</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تنظیم تاریخ پیش‌فرض
+    const today = new Date().toISOString().split('T')[0];
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgoStr = oneMonthAgo.toISOString().split('T')[0];
+    
+    if (!document.getElementById('startDateFilter').value) {
+        document.getElementById('startDateFilter').value = oneMonthAgoStr;
+    }
+    if (!document.getElementById('endDateFilter').value) {
+        document.getElementById('endDateFilter').value = today;
+    }
+    
+    // جستجوی جدول
+    const tableSearch = document.getElementById('tableSearch');
+    const attendanceTable = document.getElementById('attendanceTable');
+    
+    if (tableSearch && attendanceTable) {
+        tableSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = attendanceTable.getElementsByTagName('tr');
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            }
+        });
+    }
+    
+    // تغییر تعداد سطرهای نمایش
+    const rowsPerPage = document.getElementById('rowsPerPage');
+    if (rowsPerPage) {
+        rowsPerPage.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('page_size', this.value);
+            window.location.href = url.toString();
+        });
+    }
+    
+    // ایجاد نمودار آمار روزانه
+    const dailyStats = {{ daily_stats|safe }};
+    if (dailyStats.length > 0) {
+        const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+        
+        const labels = dailyStats.map(stat => {
+            const date = new Date(stat.date);
+            return date.toLocaleDateString('fa-IR');
+        }).reverse();
+        
+        const data = dailyStats.map(stat => stat.count).reverse();
+        
+        new Chart(dailyCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'تعداد حضور',
+                    data: data,
+                    backgroundColor: 'rgba(67, 97, 238, 0.7)',
+                    borderColor: 'rgba(67, 97, 238, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'تعداد'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'تاریخ'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // ایجاد نمودار آمار کلاسی
+    const classStats = {{ class_stats|safe }};
+    if (classStats.length > 0) {
+        const classCtx = document.getElementById('classChart').getContext('2d');
+        
+        const classLabels = classStats.map(stat => stat.classroom__name);
+        const classData = classStats.map(stat => stat.count);
+        
+        new Chart(classCtx, {
+            type: 'doughnut',
+            data: {
+                labels: classLabels,
+                datasets: [{
+                    data: classData,
+                    backgroundColor: [
+                        'rgba(67, 97, 238, 0.7)',
+                        'rgba(76, 201, 240, 0.7)',
+                        'rgba(247, 37, 133, 0.7)',
+                        'rgba(248, 150, 30, 0.7)',
+                        'rgba(249, 65, 68, 0.7)',
+                        'rgba(76, 175, 80, 0.7)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'left'
+                    }
+                }
+            }
+        });
+    }
+});
+
+function resetFilters() {
+    document.getElementById('filterForm').reset();
+    document.getElementById('startDateFilter').value = '';
+    document.getElementById('endDateFilter').value = '';
+    document.getElementById('filterForm').submit();
+}
+
+function showExportModal() {
+    document.getElementById('exportModal').style.display = 'flex';
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+
+function exportReport(format) {
+    closeExportModal();
+    
+    let url = '';
+    switch(format) {
+        case 'excel':
+            url = '{% url "verifi:export_attendance" %}?format=excel';
+            break;
+        case 'csv':
+            url = '{% url "verifi:export_attendance" %}?format=csv';
+            break;
+        case 'pdf':
+            url = '{% url "verifi:export_attendance" %}?format=pdf';
+            break;
+        case 'print':
+            printReport();
+            return;
+    }
+    
+    // اضافه کردن پارامترهای فیلتر
+    const params = new URLSearchParams(window.location.search);
+    url += '&' + params.toString();
+    
+    showNotification('در حال آماده‌سازی فایل خروجی...', 'info');
+    
+    // باز کردن لینک در پنجره جدید
+    setTimeout(() => {
+        window.open(url, '_blank');
+        showNotification('فایل خروجی آماده شد', 'success');
+    }, 1000);
+}
+
+function printReport() {
+    const printContent = document.querySelector('.report-container').innerHTML;
+    const originalContent = document.body.innerHTML;
+    
+    document.body.innerHTML = `
+        <!DOCTYPE html>
+        <html lang="fa" dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <title>گزارش حضور و غیاب - {{ today|date:"Y/m/d" }}</title>
+            <style>
+                body { font-family: Tahoma, sans-serif; padding: 20px; }
+                h1 { color: #333; border-bottom: 2px solid #4361ee; padding-bottom: 10px; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th { background: #4361ee; color: white; padding: 10px; }
+                td { padding: 8px; border-bottom: 1px solid #ddd; }
+                .summary { display: flex; gap: 20px; margin: 20px 0; }
+                .summary-item { padding: 15px; background: #f8f9fa; border-radius: 8px; flex: 1; text-align: center; }
+                @media print {
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>گزارش حضور و غیاب</h1>
+            <p>تاریخ تولید: {{ today|date:"Y/m/d H:i" }}</p>
+            <p>فیلترها: 
+                {% if selected_classroom %}کلاس: {{ selected_classroom.name }} | {% endif %}
+                {% if selected_student %}دانش‌آموز: {{ selected_student.full_name }} | {% endif %}
+                {% if start_date %}از: {{ start_date }} | {% endif %}
+                {% if end_date %}تا: {{ end_date }} | {% endif %}
+                {% if selected_camera %}دوربین: {{ selected_camera.name }}{% endif %}
+            </p>
+            ${printContent}
+            <div class="no-print" style="text-align: center; margin-top: 30px;">
+                <button onclick="window.print()" style="padding: 10px 20px; background: #4361ee; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    چاپ گزارش
+                </button>
+                <button onclick="window.close()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+                    بستن
+                </button>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload();
+}
+
+function toggleDailyStats() {
+    const dailyStats = document.getElementById('dailyStats');
+    dailyStats.style.display = dailyStats.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleClassStats() {
+    const classStats = document.getElementById('classStats');
+    classStats.style.display = classStats.style.display === 'none' ? 'block' : 'none';
+}
+
+function showNotification(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} glass animate__animated animate__fadeIn`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'exclamation-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    const messagesContainer = document.querySelector('.messages') || document.createElement('div');
+    if (!document.querySelector('.messages')) {
+        messagesContainer.className = 'messages';
+        document.querySelector('.content').prepend(messagesContainer);
+    }
+    
+    messagesContainer.prepend(alert);
+    
+    setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+</script>
+{% endblock %}

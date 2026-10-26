@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}صفحه اصلی - سیستم تشخیص چهره{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-3">👋 به سیستم تشخیص چهره مدرسه خوش آمدید</h1>
+                <p class="lead">سیستم هوشمند حضور و غیاب با استفاده از فناوری تشخیص چهره</p>
+                <div class="row mt-4">
+                    <div class="col-md-4 mb-3">
+                        <a href="{% url 'verifi:webcam_view' %}" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-video"></i> وب‌کم و تشخیص
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{% url 'verifi:live_detection_view' %}" class="btn btn-warning btn-lg w-100">
+                            <i class="fas fa-bolt"></i> تشخیص لایو
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{% url 'verifi:attendance_report' %}" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-chart-bar"></i> گزارشات
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- آمار کلی -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white bg-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-users stat-icon mb-2"></i>
+                <h3>{{ stats.total_students|default:0 }}</h3>
+                <p class="mb-0">دانش‌آموز فعال</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white bg-success">
+            <div class="card-body text-center">
+                <i class="fas fa-chalkboard-teacher stat-icon mb-2"></i>
+                <h3>{{ stats.total_classes|default:0 }}</h3>
+                <p class="mb-0">کلاس</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white bg-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-video stat-icon mb-2"></i>
+                <h3>{{ stats.total_cameras|default:0 }}</h3>
+                <p class="mb-0">دوربین فعال</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white bg-info">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-check stat-icon mb-2"></i>
+                <h3>{{ today_reports.count|default:0 }}</h3>
+                <p class="mb-0">گزارش امروز</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ردیف دوم -->
+<div class="row">
+    <!-- حضورهای اخیر -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-history"></i> حضورهای اخیر
+                    <span class="badge bg-light text-dark">{{ recent_attendances.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>دانش‌آموز</th>
+                                <th>کلاس</th>
+                                <th>دوربین</th>
+                                <th>زمان</th>
+                                <th>دقت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attendance in recent_attendances %}
+                            <tr>
+                                <td>
+                                    <strong>{{ attendance.student.full_name }}</strong>
+                                    <br><small class="text-muted">{{ attendance.student.student_id }}</small>
+                                </td>
+                                <td>
+                                    {% if attendance.student.classroom %}
+                                        {{ attendance.student.classroom.name }}
+                                    {% else %}
+                                        <span class="text-muted">بدون کلاس</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ attendance.camera.name }}</td>
+                                <td>
+                                    {{ attendance.time|date:"H:i" }}
+                                    <br><small class="text-muted">{{ attendance.date }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if attendance.confidence >= 0.8 %}success{% elif attendance.confidence >= 0.6 %}warning{% else %}danger{% endif %}">
+                                        {{ attendance.confidence|floatformat:1 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                    <p>هیچ حضور و غیابی ثبت نشده است</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{% url 'verifi:attendance_report' %}" class="btn btn-outline-primary">
+                        مشاهده همه حضورها
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- گزارشات امروز -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-day"></i> گزارش امروز ({{ today }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if today_reports %}
+                <div class="list-group">
+                    {% for report in today_reports %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ report.classroom.name }}</h6>
+                            <span class="badge bg-primary rounded-pill">
+                                {{ report.attendance_percentage|floatformat:0 }}%
+                            </span>
+                        </div>
+                        <p class="mb-1">
+                            <small class="text-muted">
+                                حاضر: {{ report.present_count }} | 
+                                غایب: {{ report.absent_count }} | 
+                                کل: {{ report.total_students }}
+                            </small>
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-clipboard fa-3x mb-3"></i>
+                    <p>گزارشی برای امروز وجود ندارد</p>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{% url 'verifi:live_detection_view' %}" class="btn btn-warning w-100 mb-2">
+                        <i class="fas fa-bolt"></i> شروع تشخیص لایو
+                    </a>
+                    <a href="{% url 'verifi:reload_faces' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-sync-alt"></i> بارگذاری مجدد چهره‌ها
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

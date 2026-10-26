@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود - سیستم تشخیص چهره مدرسه</title>
+    
+    <style>
+        :root {
+            --primary: #9e2a2b;
+            --primary-dark: #6b1d1e;
+            --secondary: #bc6c25;
+            --success: #2b6e4e;
+            --warning: #d68c1c;
+            --danger: #c1121f;
+            --dark: #2c2c2e;
+            --radius: 20px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(145deg, #f3f1ec 0%, #e8e3d9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .login-card {
+            background: rgba(255, 253, 245, 0.96);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius);
+            border: 1px solid rgba(158, 42, 43, 0.15);
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.25);
+            padding: 40px 35px;
+        }
+        
+        .logo-area {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--primary);
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .logo span:first-child {
+            font-size: 2.2rem;
+        }
+        
+        .tagline {
+            color: #8b7a6b;
+            font-size: 0.85rem;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1.5px solid rgba(158, 42, 43, 0.2);
+            border-radius: 50px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.1);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(158, 42, 43, 0.3);
+        }
+        
+        .alert {
+            padding: 12px 18px;
+            border-radius: 50px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.4s ease-out;
+            font-size: 0.85rem;
+        }
+        
+        .alert-danger {
+            background: rgba(193, 18, 31, 0.1);
+            border-right: 3px solid var(--danger);
+            color: #8b0e18;
+        }
+        
+        .alert-success {
+            background: rgba(43, 110, 78, 0.1);
+            border-right: 3px solid var(--success);
+            color: #1f543d;
+        }
+        
+        .footer-links {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            color: #8b7a6b;
+            font-size: 0.8rem;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @media (max-width: 480px) {
+            .login-card { padding: 30px 24px; }
+            .logo { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo-area">
+                <div class="logo">
+                    <span>🎓</span>
+                    <span>FaceGuard</span>
+                </div>
+                <p class="tagline">سیستم تشخیص چهره مدرسه</p>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        <span>{% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}⚠️{% else %}ℹ️{% endif %}</span>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="POST" action="{% url 'verifi:login' %}">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label class="form-label">نام کاربری</label>
+                    <input type="text" name="username" class="form-control" 
+                           placeholder="نام کاربری خود را وارد کنید" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">رمز عبور</label>
+                    <input type="password" name="password" class="form-control" 
+                           placeholder="رمز عبور خود را وارد کنید" required>
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    🔐 ورود به سیستم
+                </button>
+            </form>
+            
+            <div class="footer-links">
+                <p>© 2024 FaceGuard - تمامی حقوق محفوظ است</p>
+                <p>نسخه: ۲.۰.۱</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('input[name="username"]').focus();
+            
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-10px)';
+                    setTimeout(() => alert.remove(), 400);
+                }, 5000);
+            });
+            
+            const loginBtn = document.querySelector('.btn-login');
+            loginBtn.addEventListener('click', function() {
+                this.style.transform = 'scale(0.97)';
+                setTimeout(() => { this.style.transform = ''; }, 200);
+            });
+        });
+    </script>
+</body>
+</html>

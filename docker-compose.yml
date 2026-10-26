@@ -1,0 +1,19 @@
+version: '3.10'
+
+services:
+  web:
+    build: .
+    command: python3 manage.py runserver 0.0.0.0:8000
+    volumes:
+      - db_volume:/app/data  # مونت یک دایرکتوری به جای فایل
+    ports:
+      - "8000:8000"
+    devices:
+      - "/dev/video0:/dev/video1"  # دسترسی به وبکم
+      - "/dev/bus/usb:/dev/bus/usb"
+    environment:
+      - DJANGO_SETTINGS_MODULE=FaceGuard.settings
+
+
+volumes:
+  db_volume:

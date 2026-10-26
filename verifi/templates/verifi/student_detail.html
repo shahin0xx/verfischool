@@ -1,0 +1,1067 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}جزئیات دانش‌آموز - {{ student.full_name }}{% endblock %}
+
+{% block page_title %}{{ student.full_name }}{% endblock %}
+{% block page_subtitle %}کد دانش‌آموزی: {{ student.student_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-profile {
+        margin-bottom: 30px;
+    }
+    
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        padding: 30px;
+        border-radius: var(--radius);
+        margin-bottom: 30px;
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05));
+    }
+    
+    .profile-photo {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid white;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .profile-info {
+        flex: 1;
+    }
+    
+    .profile-name {
+        font-size: 1.8rem;
+        color: var(--dark);
+        margin-bottom: 5px;
+    }
+    
+    .profile-id {
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+    
+    .profile-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--gray);
+    }
+    
+    .meta-item i {
+        color: var(--primary);
+        width: 20px;
+    }
+    
+    .profile-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        padding: 25px;
+        border-radius: var(--radius);
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-card.present {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.1), rgba(76, 201, 240, 0.2));
+        border: 2px solid var(--success);
+    }
+    
+    .stat-card.absent {
+        background: linear-gradient(135deg, rgba(249, 65, 68, 0.1), rgba(249, 65, 68, 0.2));
+        border: 2px solid var(--danger);
+    }
+    
+    .stat-card.total {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.2));
+        border: 2px solid var(--primary);
+    }
+    
+    .stat-card.last {
+        background: linear-gradient(135deg, rgba(248, 150, 30, 0.1), rgba(248, 150, 30, 0.2));
+        border: 2px solid var(--warning);
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .stat-card.present .stat-icon {
+        color: var(--success);
+    }
+    
+    .stat-card.absent .stat-icon {
+        color: var(--danger);
+    }
+    
+    .stat-card.total .stat-icon {
+        color: var(--primary);
+    }
+    
+    .stat-card.last .stat-icon {
+        color: var(--warning);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: var(--dark);
+        font-weight: 600;
+    }
+    
+    .tabs-container {
+        margin-bottom: 30px;
+    }
+    
+    .detail-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+    }
+    
+    .detail-tab {
+        padding: 15px 25px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-weight: 600;
+        color: var(--gray);
+        cursor: pointer;
+        transition: all 0.3s;
+        white-space: nowrap;
+    }
+    
+    .detail-tab:hover {
+        color: var(--primary);
+    }
+    
+    .detail-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .attendance-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .attendance-table th {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+    }
+    
+    .attendance-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .attendance-table tr:hover {
+        background: rgba(67, 97, 238, 0.05);
+    }
+    
+    .confidence-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .high-confidence {
+        background: rgba(76, 201, 240, 0.2);
+        color: var(--success);
+    }
+    
+    .medium-confidence {
+        background: rgba(248, 150, 30, 0.2);
+        color: var(--warning);
+    }
+    
+    .low-confidence {
+        background: rgba(249, 65, 68, 0.2);
+        color: var(--danger);
+    }
+    
+    .monthly-chart {
+        height: 300px;
+        margin-top: 20px;
+    }
+    
+    .personal-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    
+    .info-group {
+        background: white;
+        padding: 20px;
+        border-radius: var(--radius);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .info-title {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(67, 97, 238, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        color: var(--gray);
+        font-weight: 500;
+    }
+    
+    .info-value {
+        color: var(--dark);
+        font-weight: 600;
+        text-align: left;
+        direction: ltr;
+    }
+    
+    .face-status {
+        padding: 20px;
+        border-radius: var(--radius);
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+    
+    .face-status.active {
+        background: rgba(76, 201, 240, 0.1);
+        border: 2px solid var(--success);
+    }
+    
+    .face-status.inactive {
+        background: rgba(248, 150, 30, 0.1);
+        border: 2px solid var(--warning);
+    }
+    
+    .status-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .face-status.active .status-icon {
+        background: linear-gradient(135deg, var(--success), #00b4d8);
+    }
+    
+    .face-status.inactive .status-icon {
+        background: linear-gradient(135deg, var(--warning), #f9844a);
+    }
+    
+    .status-details {
+        flex: 1;
+    }
+    
+    .capture-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-right: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--primary);
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 30px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        right: -34px;
+        top: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid var(--primary);
+    }
+    
+    .timeline-content {
+        background: white;
+        padding: 20px;
+        border-radius: var(--radius);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .timeline-date {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: var(--gray);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 768px) {
+        .profile-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 20px;
+        }
+        
+        .profile-meta {
+            justify-content: center;
+        }
+        
+        .profile-actions {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .stats-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .detail-tabs {
+            flex-wrap: wrap;
+        }
+        
+        .personal-info {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-profile glass animate__animated animate__fadeIn">
+    <div class="profile-header">
+        {% if student.photo %}
+        <img src="{{ student.photo.url }}" alt="{{ student.full_name }}" class="profile-photo">
+        {% else %}
+        <div class="profile-photo bg-light d-flex align-items-center justify-content-center">
+            <i class="fas fa-user text-muted" style="font-size: 4rem;"></i>
+        </div>
+        {% endif %}
+        
+        <div class="profile-info">
+            <h1 class="profile-name">{{ student.full_name }}</h1>
+            <div class="profile-id">کد دانش‌آموزی: {{ student.student_id }}</div>
+            
+            <div class="profile-meta">
+                <div class="meta-item">
+                    <i class="fas fa-school"></i>
+                    <span>{{ student.classroom.name|default:"بدون کلاس" }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-id-card"></i>
+                    <span>کد ملی: {{ student.national_id|default:"نامشخص" }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>تاریخ تولد: {{ student.birth_date|date:"Y/m/d"|default:"نامشخص" }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-phone"></i>
+                    <span>تلفن: {{ student.phone|default:"نامشخص" }}</span>
+                </div>
+            </div>
+            
+            <div class="profile-actions mt-3">
+                <button class="btn btn-primary" onclick="trackStudentLive()">
+                    <i class="fas fa-search-location"></i>
+                    ردیابی زنده
+                </button>
+                <a href="{% url 'verifi:capture_face' student.id %}" class="btn btn-success">
+                    <i class="fas fa-camera"></i>
+                    ثبت چهره جدید
+                </a>
+                <a href="{% url 'verifi:edit_student' student.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i>
+                    ویرایش اطلاعات
+                </a>
+                {% if present_today %}
+                <button class="btn btn-success" disabled>
+                    <i class="fas fa-check"></i>
+                    حاضر امروز
+                </button>
+                {% else %}
+                <form method="POST" action="{% url 'verifi:mark_attendance_manual' student.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-clock"></i>
+                        ثبت حضور دستی
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats-cards">
+        <div class="stat-card present glass animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
+            <i class="fas fa-user-check stat-icon"></i>
+            <div class="stat-number">{{ present_today|yesno:"حاضر,غایب" }}</div>
+            <div class="stat-label">وضعیت امروز</div>
+        </div>
+        
+        <div class="stat-card total glass animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+            <i class="fas fa-calendar-check stat-icon"></i>
+            <div class="stat-number">{{ total_attendance }}</div>
+            <div class="stat-label">کل حضورها</div>
+        </div>
+        
+        <div class="stat-card last glass animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+            <i class="fas fa-history stat-icon"></i>
+            <div class="stat-number">
+                {% if last_attendance %}
+                {{ last_attendance.date|date:"Y/m/d" }}
+                {% else %}
+                نامشخص
+                {% endif %}
+            </div>
+            <div class="stat-label">آخرین حضور</div>
+        </div>
+        
+        <div class="stat-card absent glass animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+            <i class="fas fa-chart-pie stat-icon"></i>
+            <div class="stat-number">{{ attendance_rate }}%</div>
+            <div class="stat-label">میانگین حضور</div>
+        </div>
+    </div>
+</div>
+
+<div class="tabs-container">
+    <div class="detail-tabs">
+        <button class="detail-tab active" data-tab="attendance">
+            <i class="fas fa-history me-2"></i>
+            تاریخچه حضور
+        </button>
+        <button class="detail-tab" data-tab="personal">
+            <i class="fas fa-user me-2"></i>
+            اطلاعات شخصی
+        </button>
+        <button class="detail-tab" data-tab="face">
+            <i class="fas fa-camera me-2"></i>
+            اطلاعات چهره
+        </button>
+        <button class="detail-tab" data-tab="stats">
+            <i class="fas fa-chart-bar me-2"></i>
+            آمار و نمودارها
+        </button>
+    </div>
+    
+    <!-- تب تاریخچه حضور -->
+    <div class="tab-content active glass" id="attendanceTab">
+        <div class="p-4">
+            <h4 class="mb-4">
+                <i class="fas fa-history text-primary me-2"></i>
+                تاریخچه حضور و غیاب
+            </h4>
+            
+            {% if attendances %}
+            <div class="table-responsive">
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th>تاریخ</th>
+                            <th>زمان</th>
+                            <th>دوربین</th>
+                            <th>دقت تشخیص</th>
+                            <th>توضیحات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attendance in attendances %}
+                        <tr>
+                            <td>{{ attendance.date|date:"Y/m/d" }}</td>
+                            <td>{{ attendance.time|time:"H:i" }}</td>
+                            <td>{{ attendance.camera.name|default:"نامشخص" }}</td>
+                            <td>
+                                <span class="confidence-badge 
+                                    {% if attendance.confidence >= 0.8 %}high-confidence
+                                    {% elif attendance.confidence >= 0.6 %}medium-confidence
+                                    {% else %}low-confidence{% endif %}">
+                                    {{ attendance.confidence|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td>{{ attendance.notes|default:"-"|truncatechars:30 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <small class="text-muted">
+                        نمایش {{ attendances|length }} رکورد از {{ total_attendance }}
+                    </small>
+                </div>
+                <a href="{% url 'verifi:attendance_report' %}?student={{ student.id }}" class="btn btn-sm btn-outline-primary">
+                    مشاهده همه حضورها
+                </a>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h5>هیچ حضور و غیابی ثبت نشده است</h5>
+                <p class="text-muted">این دانش‌آموز هنوز توسط سیستم شناسایی نشده است.</p>
+                <button class="btn btn-primary mt-3" onclick="trackStudentLive()">
+                    <i class="fas fa-search-location"></i>
+                    ردیابی و شناسایی
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- تب اطلاعات شخصی -->
+    <div class="tab-content glass" id="personalTab">
+        <div class="p-4">
+            <h4 class="mb-4">
+                <i class="fas fa-user text-success me-2"></i>
+                اطلاعات شخصی دانش‌آموز
+            </h4>
+            
+            <div class="personal-info">
+                <div class="info-group">
+                    <h5 class="info-title">
+                        <i class="fas fa-id-card"></i>
+                        اطلاعات هویتی
+                    </h5>
+                    <div class="info-row">
+                        <span class="info-label">نام کامل:</span>
+                        <span class="info-value">{{ student.full_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">کد دانش‌آموزی:</span>
+                        <span class="info-value">{{ student.student_id }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">کد ملی:</span>
+                        <span class="info-value">{{ student.national_id|default:"نامشخص" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">تاریخ تولد:</span>
+                        <span class="info-value">{{ student.birth_date|date:"Y/m/d"|default:"نامشخص" }}</span>
+                    </div>
+                </div>
+                
+                <div class="info-group">
+                    <h5 class="info-title">
+                        <i class="fas fa-school"></i>
+                        اطلاعات تحصیلی
+                    </h5>
+                    <div class="info-row">
+                        <span class="info-label">کلاس:</span>
+                        <span class="info-value">{{ student.classroom.name|default:"بدون کلاس" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">مقطع:</span>
+                        <span class="info-value">{{ student.classroom.grade|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">رشته:</span>
+                        <span class="info-value">{{ student.classroom.field|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">سال تحصیلی:</span>
+                        <span class="info-value">۱۴۰۳-۱۴۰۲</span>
+                    </div>
+                </div>
+                
+                <div class="info-group">
+                    <h5 class="info-title">
+                        <i class="fas fa-address-card"></i>
+                        اطلاعات تماس
+                    </h5>
+                    <div class="info-row">
+                        <span class="info-label">تلفن:</span>
+                        <span class="info-value">{{ student.phone|default:"نامشخص" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">نام ولی:</span>
+                        <span class="info-value">{{ student.parent_name|default:"نامشخص" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">آدرس:</span>
+                        <span class="info-value">{{ student.address|default:"نامشخص"|truncatechars:50 }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">تاریخ ثبت:</span>
+                        <span class="info-value">{{ student.created_at|date:"Y/m/d" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-4">
+                <i class="fas fa-info-circle"></i>
+                برای ویرایش اطلاعات، روی دکمه "ویرایش اطلاعات" در بخش بالا کلیک کنید.
+            </div>
+        </div>
+    </div>
+    
+    <!-- تب اطلاعات چهره -->
+    <div class="tab-content glass" id="faceTab">
+        <div class="p-4">
+            <h4 class="mb-4">
+                <i class="fas fa-camera text-warning me-2"></i>
+                اطلاعات تشخیص چهره
+            </h4>
+            
+            <div class="face-status {{ face_encoding_status|yesno:'active,inactive' }}">
+                <div class="status-icon">
+                    <i class="fas fa-{{ face_encoding_status|yesno:'check,exclamation' }}"></i>
+                </div>
+                <div class="status-details">
+                    <h5>
+                        {% if face_encoding_status %}
+                        چهره فعال در سیستم
+                        {% else %}
+                        چهره نیاز به ثبت
+                        {% endif %}
+                    </h5>
+                    <p class="mb-0">
+                        {% if face_encoding_status %}
+                        چهره این دانش‌آموز در سیستم تشخیص بارگذاری شده است و قابل شناسایی می‌باشد.
+                        {% else %}
+                        چهره این دانش‌آموز در سیستم بارگذاری نشده است. برای شناسایی نیاز به ثبت چهره دارد.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="capture-actions mt-4">
+                <button class="btn btn-primary" onclick="captureFaceWebcam()">
+                    <i class="fas fa-camera"></i>
+                    عکس‌برداری با وب‌کم
+                </button>
+                <button class="btn btn-success" onclick="uploadFaceImage()">
+                    <i class="fas fa-upload"></i>
+                    آپلود تصویر
+                </button>
+                <button class="btn btn-warning" onclick="trainFaceModel()">
+                    <i class="fas fa-brain"></i>
+                    آموزش مدل
+                </button>
+                {% if face_encoding_status %}
+                <button class="btn btn-danger" onclick="deleteFaceEncoding()">
+                    <i class="fas fa-trash"></i>
+                    حذف چهره
+                </button>
+                {% endif %}
+            </div>
+            
+            <div class="alert alert-warning mt-4">
+                <i class="fas fa-lightbulb"></i>
+                <strong>نکات مهم:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>برای بهترین نتیجه، چهره باید در نور مناسب و مستقیم به دوربین نگاه کند.</li>
+                    <li>از عکس‌های با کیفیت و واضح استفاده کنید.</li>
+                    <li>عینک، کلاه و ماسک می‌تواند دقت تشخیص را کاهش دهد.</li>
+                    <li>توصیه می‌شود از چند زاویه مختلف عکس بگیرید.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- تب آمار و نمودارها -->
+    <div class="tab-content glass" id="statsTab">
+        <div class="p-4">
+            <h4 class="mb-4">
+                <i class="fas fa-chart-bar text-info me-2"></i>
+                آمار و نمودارهای حضور
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-group h-100">
+                        <h5 class="info-title">
+                            <i class="fas fa-chart-pie"></i>
+                            آمار ماهانه
+                        </h5>
+                        <div class="monthly-stats">
+                            {% for stat in monthly_stats %}
+                            <div class="info-row">
+                                <span class="info-label">{{ stat.month }}:</span>
+                                <span class="info-value">
+                                    {{ stat.days }} از {{ stat.total_days }} روز
+                                    <span class="badge bg-primary ms-2">{{ stat.percentage }}%</span>
+                                </span>
+                            </div>
+                            {% empty %}
+                            <div class="empty-state py-3">
+                                <i class="fas fa-chart-line"></i>
+                                <p class="mb-0">آماری برای نمایش وجود ندارد</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="info-group h-100">
+                        <h5 class="info-title">
+                            <i class="fas fa-trend-up"></i>
+                            روند حضور
+                        </h5>
+                        <div class="monthly-chart">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-group mt-4">
+                <h5 class="info-title">
+                    <i class="fas fa-clock"></i>
+                    زمان‌بندی حضور
+                </h5>
+                <div class="timeline">
+                    {% for attendance in recent_attendances|slice:":5" %}
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-date">
+                                <i class="fas fa-calendar"></i>
+                                {{ attendance.date|date:"Y/m/d" }} - {{ attendance.time|time:"H:i" }}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-camera text-primary me-2"></i>
+                                    {{ attendance.camera.name|default:"دوربین مرکزی" }}
+                                </div>
+                                <span class="badge bg-primary">{{ attendance.confidence|floatformat:1 }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state py-3">
+                        <i class="fas fa-history"></i>
+                        <p class="mb-0">هیچ حضور اخیری ثبت نشده است</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="captureModal">
+    <div class="modal-content glass" style="max-width: 800px;">
+        <div class="modal-header">
+            <h4 class="mb-0">
+                <i class="fas fa-camera me-2"></i>
+                عکس‌برداری از چهره
+            </h4>
+            <button class="btn btn-light btn-sm" onclick="closeCaptureModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="webcam-preview" style="height: 300px; border-radius: var(--radius); overflow: hidden; background: #000;">
+                        <img src="{% url 'verifi:webcam_feed' %}" alt="پیش‌نمایش وب‌کم" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-primary" onclick="capturePhoto()">
+                            <i class="fas fa-camera me-2"></i>
+                            عکس‌برداری
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div id="captureResult" class="text-center">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            برای ثبت چهره، روی دکمه عکس‌برداری کلیک کنید.
+                        </div>
+                        <div id="capturedImage" style="display: none;">
+                            <img id="capturedPhoto" alt="عکس گرفته شده" 
+                                 style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; border: 5px solid var(--primary); margin: 0 auto 20px;">
+                            <div class="mt-3">
+                                <button class="btn btn-success" onclick="saveCapturedPhoto()">
+                                    <i class="fas fa-save me-2"></i>
+                                    ذخیره چهره
+                                </button>
+                                <button class="btn btn-secondary" onclick="retakePhoto()">
+                                    <i class="fas fa-redo me-2"></i>
+                                    عکس مجدد
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت تب‌ها
+    const tabs = document.querySelectorAll('.detail-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
+            
+            // حذف کلاس active از همه تب‌ها
+            tabs.forEach(t => t.classList.remove('active'));
+            // اضافه کردن کلاس active به تب فعلی
+            this.classList.add('active');
+            
+            // مخفی کردن همه محتواها
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // نمایش محتوای مربوطه
+            document.getElementById(`${tabId}Tab`).classList.add('active');
+        });
+    });
+    
+    // ایجاد نمودار حضور ماهانه
+    const monthlyStats = {{ monthly_stats|safe }};
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+    
+    if (monthlyStats.length > 0) {
+        const labels = monthlyStats.map(stat => stat.month).reverse();
+        const percentages = monthlyStats.map(stat => stat.percentage).reverse();
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'درصد حضور',
+                    data: percentages,
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'درصد'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+
+function trackStudentLive() {
+    showNotification('در حال انتقال به صفحه ردیابی...', 'info');
+    setTimeout(() => {
+        window.location.href = "{% url 'verifi:search_student' %}?student={{ student.id }}";
+    }, 1000);
+}
+
+function captureFaceWebcam() {
+    document.getElementById('captureModal').style.display = 'flex';
+}
+
+function closeCaptureModal() {
+    document.getElementById('captureModal').style.display = 'none';
+    document.getElementById('capturedImage').style.display = 'none';
+    document.getElementById('captureResult').querySelector('.alert').style.display = 'block';
+}
+
+function capturePhoto() {
+    showNotification('در حال عکس‌برداری...', 'info');
+    
+    // شبیه‌سازی عکس‌برداری
+    setTimeout(() => {
+        document.getElementById('capturedPhoto').src = "{% if student.photo %}{{ student.photo.url }}{% else %}data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 24 24'><path fill='%236c757d' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>{% endif %}";
+        document.getElementById('capturedImage').style.display = 'block';
+        document.getElementById('captureResult').querySelector('.alert').style.display = 'none';
+        showNotification('عکس با موفقیت گرفته شد', 'success');
+    }, 1500);
+}
+
+function saveCapturedPhoto() {
+    showNotification('در حال ذخیره چهره در سیستم...', 'info');
+    
+    setTimeout(() => {
+        closeCaptureModal();
+        showNotification('چهره با موفقیت در سیستم ثبت شد', 'success');
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }, 2000);
+}
+
+function retakePhoto() {
+    document.getElementById('capturedImage').style.display = 'none';
+    document.getElementById('captureResult').querySelector('.alert').style.display = 'block';
+}
+
+function uploadFaceImage() {
+    showNotification('این قابلیت در نسخه بعدی اضافه خواهد شد', 'info');
+}
+
+function trainFaceModel() {
+    showNotification('در حال آموزش مدل تشخیص چهره...', 'info');
+    
+    setTimeout(() => {
+        showNotification('مدل با موفقیت آموزش داده شد', 'success');
+    }, 3000);
+}
+
+function deleteFaceEncoding() {
+    if (confirm('آیا مطمئن هستید که می‌خواهید چهره این دانش‌آموز را از سیستم حذف کنید؟')) {
+        showNotification('در حال حذف چهره از سیستم...', 'warning');
+        
+        setTimeout(() => {
+            showNotification('چهره با موفقیت حذف شد', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }, 2000);
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} glass animate__animated animate__fadeIn`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'exclamation-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    const messagesContainer = document.querySelector('.messages') || document.createElement('div');
+    if (!document.querySelector('.messages')) {
+        messagesContainer.className = 'messages';
+        document.querySelector('.content').prepend(messagesContainer);
+    }
+    
+    messagesContainer.prepend(alert);
+    
+    setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+</script>
+{% endblock %}

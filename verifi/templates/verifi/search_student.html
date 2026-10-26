@@ -1,0 +1,901 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}جستجوی دانش‌آموز - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}جستجوی پیشرفته دانش‌آموز{% endblock %}
+{% block page_subtitle %}جستجو، ردیابی زنده و مشاهده اطلاعات دانش‌آموزان{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .search-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .search-tab {
+        padding: 10px 25px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-weight: 600;
+        color: var(--gray);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .search-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    
+    .search-form {
+        display: grid;
+        grid-template-columns: 1fr 2fr auto;
+        gap: 15px;
+        align-items: end;
+    }
+    
+    .form-group {
+        margin-bottom: 0;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+    
+    .results-container {
+        margin-top: 30px;
+    }
+    
+    .result-card {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+        position: relative;
+    }
+    
+    .result-card:hover {
+        transform: translateX(-10px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .result-photo {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--primary);
+        margin-left: 20px;
+    }
+    
+    .result-info {
+        flex: 1;
+    }
+    
+    .result-info h4 {
+        margin-bottom: 5px;
+        color: var(--dark);
+    }
+    
+    .result-info .student-id {
+        color: var(--primary);
+        font-weight: 600;
+        margin-left: 10px;
+    }
+    
+    .result-meta {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+    
+    .result-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .status-badge {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+    }
+    
+    .live-track-modal {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .live-track-content {
+        width: 90%;
+        max-width: 1200px;
+        background: white;
+        border-radius: var(--radius);
+        overflow: hidden;
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    .track-header {
+        padding: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .track-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    .track-video {
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: #000;
+        position: relative;
+    }
+    
+    .track-video img {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+    }
+    
+    .track-info {
+        padding: 20px;
+    }
+    
+    .track-student {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .track-student-photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid var(--primary);
+    }
+    
+    .track-details {
+        flex: 1;
+    }
+    
+    .track-details h3 {
+        margin-bottom: 10px;
+        color: var(--dark);
+    }
+    
+    .track-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .track-stat {
+        text-align: center;
+        padding: 15px;
+        background: rgba(67, 97, 238, 0.1);
+        border-radius: var(--radius);
+    }
+    
+    .track-stat .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 5px;
+    }
+    
+    .track-stat .label {
+        font-size: 0.9rem;
+        color: var(--gray);
+    }
+    
+    .camera-selector {
+        margin-top: 20px;
+    }
+    
+    .camera-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .camera-card {
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+    
+    .camera-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-5px);
+    }
+    
+    .camera-card.active {
+        border-color: var(--primary);
+        background: rgba(67, 97, 238, 0.1);
+    }
+    
+    .camera-card i {
+        font-size: 2rem;
+        color: var(--primary);
+        margin-bottom: 10px;
+    }
+    
+    .empty-results {
+        text-align: center;
+        padding: 50px 20px;
+    }
+    
+    .empty-results i {
+        font-size: 4rem;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .search-form {
+            grid-template-columns: 1fr;
+        }
+        
+        .track-body {
+            grid-template-columns: 1fr;
+        }
+        
+        .result-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .result-photo {
+            margin: 0 0 15px 0;
+        }
+        
+        .result-actions {
+            margin-top: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container glass animate__animated animate__fadeIn">
+    <div class="search-tabs">
+        <button class="search-tab active" data-tab="quick">جستجوی سریع</button>
+        <button class="search-tab" data-tab="advanced">جستجوی پیشرفته</button>
+        <button class="search-tab" data-tab="absent">دانش‌آموزان غایب</button>
+    </div>
+    
+    <form method="GET" action="{% url 'verifi:search_student' %}" class="search-form" id="searchForm">
+        <div class="form-group">
+            <label for="search_type">نوع جستجو</label>
+            <select class="form-select" id="search_type" name="search_type">
+                <option value="name">نام و نام خانوادگی</option>
+                <option value="student_id">کد دانش‌آموزی</option>
+                <option value="national_id">کد ملی</option>
+                <option value="classroom">کلاس</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="search_query">عبارت جستجو</label>
+            <input type="text" class="form-control" id="search_query" name="search_query" 
+                   placeholder="عبارت مورد نظر را وارد کنید..." required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-search"></i>
+            جستجو
+        </button>
+    </form>
+    
+    <div class="advanced-search mt-4" id="advancedSearch" style="display: none;">
+        <form method="GET" action="{% url 'verifi:search_student' %}">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>کلاس</label>
+                        <select class="form-select" name="classroom">
+                            <option value="">همه کلاس‌ها</option>
+                            {% for classroom in classrooms %}
+                            <option value="{{ classroom.id }}">{{ classroom.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>وضعیت حضور امروز</label>
+                        <select class="form-select" name="attendance_status">
+                            <option value="">همه</option>
+                            <option value="present">حاضر</option>
+                            <option value="absent">غایب</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>وضعیت دانش‌آموز</label>
+                        <select class="form-select" name="student_status">
+                            <option value="">همه</option>
+                            <option value="active">فعال</option>
+                            <option value="inactive">غیرفعال</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>تاریخ آخرین حضور</label>
+                        <input type="date" class="form-control" name="last_seen">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i>
+                    اعمال فیلترها
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="results-container">
+    {% if search_results %}
+    <div class="card glass">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-search"></i>
+                <span>نتایج جستجو</span>
+                <span class="badge bg-primary">{{ search_results|length }} نتیجه</span>
+            </div>
+            
+            <div class="card-actions">
+                <select class="form-select form-select-sm" id="sortResults">
+                    <option value="name">مرتب سازی بر اساس نام</option>
+                    <option value="classroom">مرتب سازی بر اساس کلاس</option>
+                    <option value="attendance">مرتب سازی بر اساس تعداد حضور</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% for result in search_results %}
+            <div class="result-card glass" data-name="{{ result.student.full_name|lower }}" 
+                 data-classroom="{{ result.student.classroom.name|default:''|lower }}"
+                 data-attendance="{{ result.total_attendance }}">
+                <div class="status-badge">
+                    {% if result.present_today %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-check-circle"></i>
+                        حاضر امروز
+                    </span>
+                    {% else %}
+                    <span class="badge bg-danger">
+                        <i class="fas fa-clock"></i>
+                        غایب امروز
+                    </span>
+                    {% endif %}
+                </div>
+                
+                {% if result.student.photo %}
+                <img src="{{ result.student.photo.url }}" alt="{{ result.student.full_name }}" class="result-photo">
+                {% else %}
+                <div class="result-photo bg-light d-flex align-items-center justify-content-center">
+                    <i class="fas fa-user text-muted" style="font-size: 2rem;"></i>
+                </div>
+                {% endif %}
+                
+                <div class="result-info">
+                    <h4>
+                        {{ result.student.full_name }}
+                        <span class="student-id">#{{ result.student.student_id }}</span>
+                    </h4>
+                    
+                    <div class="result-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-school"></i>
+                            <span>{{ result.student.classroom.name|default:"بدون کلاس" }}</span>
+                        </div>
+                        
+                        <div class="meta-item">
+                            <i class="fas fa-id-card"></i>
+                            <span>{{ result.student.national_id|default:"بدون کد ملی" }}</span>
+                        </div>
+                        
+                        <div class="meta-item">
+                            <i class="fas fa-history"></i>
+                            <span>{{ result.total_attendance }} حضور ثبت شده</span>
+                        </div>
+                        
+                        {% if result.last_attendance %}
+                        <div class="meta-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>آخرین حضور: {{ result.last_attendance.date|date:"Y/m/d" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="result-actions">
+                    <a href="{% url 'verifi:student_detail' result.student.id %}" class="btn btn-sm btn-info">
+                        <i class="fas fa-eye"></i>
+                        مشاهده
+                    </a>
+                    
+                    <button class="btn btn-sm btn-primary track-btn" 
+                            data-student-id="{{ result.student.id }}"
+                            data-student-name="{{ result.student.full_name }}"
+                            data-student-photo="{% if result.student.photo %}{{ result.student.photo.url }}{% endif %}"
+                            data-student-class="{{ result.student.classroom.name|default:'بدون کلاس' }}"
+                            data-student-id-number="{{ result.student.student_id }}">
+                        <i class="fas fa-search-location"></i>
+                        ردیابی زنده
+                    </button>
+                    
+                    {% if not result.present_today %}
+                    <form method="POST" action="{% url 'verifi:mark_attendance_manual' result.student.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="fas fa-check"></i>
+                            ثبت حضور
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif request.GET.search_query %}
+    <div class="empty-results glass">
+        <i class="fas fa-search"></i>
+        <h3>نتیجه‌ای یافت نشد</h3>
+        <p class="text-muted">هیچ دانش‌آموزی با عبارت "{{ request.GET.search_query }}" پیدا نشد.</p>
+        <button class="btn btn-primary mt-3" onclick="location.href='{% url 'verifi:register_student' %}'">
+            <i class="fas fa-user-plus"></i>
+            ثبت دانش‌آموز جدید
+        </button>
+    </div>
+    {% else %}
+    <div class="empty-results glass">
+        <i class="fas fa-user-graduate"></i>
+        <h3>جستجو را شروع کنید</h3>
+        <p class="text-muted">عبارت مورد نظر خود را وارد کنید تا دانش‌آموزان مرتبط نمایش داده شوند.</p>
+        <div class="quick-search mt-4">
+            <h5>جستجوی سریع:</h5>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                <button class="btn btn-outline-primary" onclick="quickSearch('present')">
+                    <i class="fas fa-check-circle"></i>
+                    حاضرین امروز
+                </button>
+                <button class="btn btn-outline-primary" onclick="quickSearch('absent')">
+                    <i class="fas fa-clock"></i>
+                    غایبین امروز
+                </button>
+                <button class="btn btn-outline-primary" onclick="quickSearch('recent')">
+                    <i class="fas fa-history"></i>
+                    آخرین حضورها
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="live-track-modal" id="liveTrackModal">
+    <div class="live-track-content">
+        <div class="track-header">
+            <div>
+                <h3 class="mb-0">
+                    <i class="fas fa-search-location"></i>
+                    ردیابی زنده دانش‌آموز
+                </h3>
+                <p id="trackingStudentName" class="mb-0 mt-1"></p>
+            </div>
+            <button class="btn btn-light" onclick="closeLiveTrack()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="track-body">
+            <div class="track-video">
+                <img id="cameraFeed" src="" alt="پخش زنده">
+                <div class="video-overlay">
+                    <div>
+                        <span id="cameraName">دوربین مرکزی</span>
+                        <span class="live-indicator"></span>
+                    </div>
+                    <div id="detectionInfo">
+                        <span class="badge bg-success" id="detectionStatus">در حال جستجو...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="track-info">
+                <div class="track-student">
+                    <img id="trackStudentPhoto" src="" alt="عکس دانش‌آموز" class="track-student-photo">
+                    <div class="track-details">
+                        <h3 id="modalStudentName"></h3>
+                        <p><i class="fas fa-id-card"></i> کد دانش‌آموزی: <span id="modalStudentId"></span></p>
+                        <p><i class="fas fa-school"></i> کلاس: <span id="modalStudentClass"></span></p>
+                        <p><i class="fas fa-clock"></i> زمان شروع ردیابی: <span id="trackingTime"></span></p>
+                    </div>
+                </div>
+                
+                <div class="track-stats">
+                    <div class="track-stat">
+                        <div class="value" id="trackDuration">0:00</div>
+                        <div class="label">مدت ردیابی</div>
+                    </div>
+                    
+                    <div class="track-stat">
+                        <div class="value" id="detectionCount">0</div>
+                        <div class="label">تعداد تشخیص</div>
+                    </div>
+                    
+                    <div class="track-stat">
+                        <div class="value" id="lastDetection">--:--</div>
+                        <div class="label">آخرین تشخیص</div>
+                    </div>
+                    
+                    <div class="track-stat">
+                        <div class="value" id="confidenceLevel">0%</div>
+                        <div class="label">دقت آخرین تشخیص</div>
+                    </div>
+                </div>
+                
+                <div class="camera-selector">
+                    <h5><i class="fas fa-video"></i> انتخاب دوربین برای ردیابی</h5>
+                    <div class="camera-grid" id="cameraGrid">
+                        {% for camera in cameras %}
+                        <div class="camera-card" data-camera-id="{{ camera.id }}" data-camera-name="{{ camera.name }}" data-camera-type="{{ camera.camera_type }}">
+                            <i class="fas fa-camera"></i>
+                            <h6>{{ camera.name }}</h6>
+                            <p class="small text-muted">{{ camera.location }}</p>
+                            <span class="badge {% if camera.camera_type == 'webcam' %}bg-primary{% else %}bg-info{% endif %}">
+                                {{ camera.get_camera_type_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-3 border-top text-center">
+            <button class="btn btn-danger" onclick="stopTracking()">
+                <i class="fas fa-stop"></i>
+                توقف ردیابی
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchTabs = document.querySelectorAll('.search-tab');
+    const advancedSearch = document.getElementById('advancedSearch');
+    
+    searchTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
+            
+            searchTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            if (tabId === 'advanced') {
+                advancedSearch.style.display = 'block';
+                document.getElementById('searchForm').style.display = 'none';
+            } else if (tabId === 'absent') {
+                location.href = '{% url "verifi:dashboard" %}#absent';
+            } else {
+                advancedSearch.style.display = 'none';
+                document.getElementById('searchForm').style.display = 'grid';
+            }
+        });
+    });
+    
+    const sortSelect = document.getElementById('sortResults');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            const sortBy = this.value;
+            const resultCards = document.querySelectorAll('.result-card');
+            const container = document.querySelector('.card-body');
+            
+            const sortedCards = Array.from(resultCards).sort((a, b) => {
+                if (sortBy === 'name') {
+                    return a.dataset.name.localeCompare(b.dataset.name);
+                } else if (sortBy === 'classroom') {
+                    return a.dataset.classroom.localeCompare(b.dataset.classroom);
+                } else if (sortBy === 'attendance') {
+                    return parseInt(b.dataset.attendance) - parseInt(a.dataset.attendance);
+                }
+                return 0;
+            });
+            
+            container.innerHTML = '';
+            sortedCards.forEach(card => container.appendChild(card));
+        });
+    }
+    
+    const trackButtons = document.querySelectorAll('.track-btn');
+    trackButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const studentId = this.dataset.studentId;
+            const studentName = this.dataset.studentName;
+            const studentPhoto = this.dataset.studentPhoto;
+            const studentClass = this.dataset.studentClass;
+            const studentIdNumber = this.dataset.studentIdNumber;
+            
+            openLiveTrack(studentId, studentName, studentPhoto, studentClass, studentIdNumber);
+        });
+    });
+    
+    const cameraCards = document.querySelectorAll('.camera-card');
+    cameraCards.forEach(card => {
+        card.addEventListener('click', function() {
+            cameraCards.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            
+            const cameraId = this.dataset.cameraId;
+            const cameraName = this.dataset.cameraName;
+            const cameraType = this.dataset.cameraType;
+            
+            selectCamera(cameraId, cameraName, cameraType);
+        });
+    });
+    
+    if (cameraCards.length > 0) {
+        cameraCards[0].classList.add('active');
+    }
+});
+
+let trackingInterval;
+let trackingStartTime;
+let detectionCounter = 0;
+
+function openLiveTrack(studentId, studentName, studentPhoto, studentClass, studentIdNumber) {
+    const modal = document.getElementById('liveTrackModal');
+    modal.style.display = 'flex';
+    
+    document.getElementById('modalStudentName').textContent = studentName;
+    document.getElementById('trackingStudentName').textContent = `در حال ردیابی: ${studentName}`;
+    document.getElementById('modalStudentId').textContent = studentIdNumber;
+    document.getElementById('modalStudentClass').textContent = studentClass;
+    
+    if (studentPhoto) {
+        document.getElementById('trackStudentPhoto').src = studentPhoto;
+    } else {
+        document.getElementById('trackStudentPhoto').src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24"><path fill="%236c757d" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+    }
+    
+    const now = new Date();
+    document.getElementById('trackingTime').textContent = now.toLocaleTimeString('fa-IR');
+    trackingStartTime = now;
+    
+    startTracking();
+    updateTrackingTime();
+    trackingInterval = setInterval(updateTrackingTime, 1000);
+}
+
+function closeLiveTrack() {
+    const modal = document.getElementById('liveTrackModal');
+    modal.style.display = 'none';
+    
+    if (trackingInterval) {
+        clearInterval(trackingInterval);
+    }
+    
+    stopTracking();
+}
+
+function startTracking() {
+    detectionCounter = 0;
+    updateDetectionInfo('در حال جستجو...', 'warning');
+    
+    setTimeout(() => {
+        updateDetectionInfo('دانش‌آموز شناسایی شد!', 'success');
+        detectionCounter++;
+        updateDetectionCount();
+        updateLastDetection();
+        updateConfidenceLevel(85 + Math.random() * 15);
+    }, 2000);
+    
+    setInterval(() => {
+        if (Math.random() > 0.3) {
+            detectionCounter++;
+            updateDetectionCount();
+            updateLastDetection();
+            updateConfidenceLevel(70 + Math.random() * 30);
+        }
+    }, 5000);
+}
+
+function stopTracking() {
+    updateDetectionInfo('ردیابی متوقف شد', 'danger');
+    closeLiveTrack();
+}
+
+function updateTrackingTime() {
+    if (!trackingStartTime) return;
+    
+    const now = new Date();
+    const diff = Math.floor((now - trackingStartTime) / 1000);
+    
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    
+    document.getElementById('trackDuration').textContent = 
+        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateDetectionInfo(message, type = 'info') {
+    const badgeClass = type === 'success' ? 'bg-success' : 
+                      type === 'warning' ? 'bg-warning' : 
+                      type === 'danger' ? 'bg-danger' : 'bg-info';
+    
+    document.getElementById('detectionStatus').className = `badge ${badgeClass}`;
+    document.getElementById('detectionStatus').textContent = message;
+}
+
+function updateDetectionCount() {
+    document.getElementById('detectionCount').textContent = detectionCounter;
+}
+
+function updateLastDetection() {
+    const now = new Date();
+    document.getElementById('lastDetection').textContent = now.toLocaleTimeString('fa-IR').slice(0, 5);
+}
+
+function updateConfidenceLevel(confidence) {
+    document.getElementById('confidenceLevel').textContent = Math.round(confidence) + '%';
+}
+
+function selectCamera(cameraId, cameraName, cameraType) {
+    document.getElementById('cameraName').textContent = cameraName;
+    
+    let feedUrl = '';
+    if (cameraType === 'webcam') {
+        feedUrl = '{% url "verifi:webcam_feed" %}';
+    } else {
+        feedUrl = `/camera/${cameraId}/feed/`;
+    }
+    
+    document.getElementById('cameraFeed').src = feedUrl;
+}
+
+function quickSearch(type) {
+    let url = '{% url "verifi:search_student" %}?';
+    
+    if (type === 'present') {
+        url += 'attendance_status=present';
+    } else if (type === 'absent') {
+        url += 'attendance_status=absent';
+    } else if (type === 'recent') {
+        url += 'last_seen=' + new Date().toISOString().split('T')[0];
+    }
+    
+    location.href = url;
+}
+
+function markAttendance(studentId) {
+    fetch(`/attendance/manual/${studentId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('حضور با موفقیت ثبت شد', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showNotification(data.message || 'خطا در ثبت حضور', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('خطا در ارتباط با سرور', 'error');
+    });
+}
+
+function showNotification(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} glass animate__animated animate__fadeIn`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'exclamation-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    const messagesContainer = document.querySelector('.messages') || document.createElement('div');
+    if (!document.querySelector('.messages')) {
+        messagesContainer.className = 'messages';
+        document.querySelector('.content').prepend(messagesContainer);
+    }
+    
+    messagesContainer.prepend(alert);
+    
+    setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

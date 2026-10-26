@@ -1,0 +1,296 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}داشبورد - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}داشبورد مدیریت{% endblock %}
+{% block page_subtitle %}نظارت کامل بر سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .quick-stat {
+        padding: 28px 20px;
+        border-radius: var(--radius);
+        color: white;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+    }
+    
+    .quick-stat::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+    }
+    
+    .quick-stat.students { background: linear-gradient(135deg, #9e2a2b, #6b1d1e); }
+    .quick-stat.attendance { background: linear-gradient(135deg, #2b6e4e, #1e4a36); }
+    .quick-stat.unknown { background: linear-gradient(135deg, #bc6c25, #8b4e1a); }
+    .quick-stat.cameras { background: linear-gradient(135deg, #6c757d, #495057); }
+    
+    .quick-stat:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stat-number { font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; }
+    .stat-label { font-size: 0.9rem; opacity: 0.9; letter-spacing: 0.3px; }
+    
+    .recent-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    @media (max-width: 992px) {
+        .recent-grid { grid-template-columns: 1fr; }
+    }
+    
+    .recent-card { padding: 20px; border-radius: var(--radius); background: #fffcf7; box-shadow: var(--shadow); }
+    
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 14px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.2s;
+    }
+    
+    .activity-item:hover {
+        background: rgba(158, 42, 43, 0.04);
+        transform: translateX(-3px);
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 14px;
+        color: white;
+        font-size: 1.2rem;
+    }
+    
+    .activity-icon.recognition { background: linear-gradient(135deg, #2b6e4e, #1e4a36); }
+    .activity-icon.unknown_detected { background: linear-gradient(135deg, #bc6c25, #8b4e1a); }
+    .activity-icon.error { background: linear-gradient(135deg, #c1121f, #8b0e18); }
+    
+    .activity-details { flex: 1; }
+    .activity-details h6 { margin-bottom: 4px; font-weight: 600; }
+    .activity-time { font-size: 0.75rem; color: var(--gray); }
+    
+    .system-health { padding: 24px; border-radius: var(--radius); margin-bottom: 30px; background: #fffcf7; box-shadow: var(--shadow); }
+    .health-good { border-right: 4px solid var(--success); }
+    .health-warning { border-right: 4px solid var(--warning); }
+    .health-critical { border-right: 4px solid var(--danger); }
+    
+    .health-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .health-metric {
+        text-align: center;
+        padding: 16px;
+        background: #f8f5ef;
+        border-radius: var(--radius);
+    }
+    
+    .metric-value { font-size: 1.6rem; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
+    .metric-label { font-size: 0.8rem; color: var(--gray); }
+    
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--gray); }
+    .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="quick-stats">
+    <div class="quick-stat students animate__fadeInUp">
+        <div class="stat-icon">👥</div>
+        <div class="stat-number">{{ stats.total_students }}</div>
+        <div class="stat-label">دانش‌آموزان کل</div>
+    </div>
+    
+    <div class="quick-stat attendance animate__fadeInUp">
+        <div class="stat-icon">✅</div>
+        <div class="stat-number">{{ stats.attendances_today }}</div>
+        <div class="stat-label">حضور امروز</div>
+    </div>
+    
+    <div class="quick-stat unknown animate__fadeInUp">
+        <div class="stat-icon">🕵️</div>
+        <div class="stat-number">{{ stats.unknown_persons_today }}</div>
+        <div class="stat-label">ناشناس امروز</div>
+    </div>
+    
+    <div class="quick-stat cameras animate__fadeInUp">
+        <div class="stat-icon">📷</div>
+        <div class="stat-number">{{ stats.online_cameras }}/{{ stats.total_cameras }}</div>
+        <div class="stat-label">دوربین آنلاین</div>
+    </div>
+</div>
+
+<div class="recent-grid">
+    <div class="recent-card animate__fadeIn">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">🕒 آخرین فعالیت‌ها</h5>
+            <a href="{% url 'verifi:recognition_logs' %}" class="btn btn-sm btn-outline-primary">مشاهده همه</a>
+        </div>
+        
+        <div class="activity-list">
+            {% for log in recent_logs %}
+            <div class="activity-item">
+                <div class="activity-icon {{ log.action }}">
+                    {% if log.action == 'recognition' %}✅{% elif log.action == 'unknown_detected' %}🕵️{% else %}⚠️{% endif %}
+                </div>
+                <div class="activity-details">
+                    <h6 class="mb-1">
+                        {% if log.student %}{{ log.student.full_name }}{% else %}فرد ناشناس{% endif %}
+                    </h6>
+                    <p class="mb-0 small text-muted">
+                        📷 {{ log.camera.name|default:"دوربین مرکزی" }}
+                        {% if log.confidence %} 📊 {{ log.confidence|floatformat:1 }}%{% endif %}
+                    </p>
+                </div>
+                <div class="activity-time">{{ log.created_at|date:"H:i" }}</div>
+            </div>
+            {% empty %}
+            <div class="empty-state">🕒<p>هیچ فعالیتی ثبت نشده است</p></div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="recent-card animate__fadeIn">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">🏫 آمار کلاس‌ها</h5>
+            <a href="{% url 'verifi:attendance_report' %}" class="btn btn-sm btn-outline-primary">گزارش کامل</a>
+        </div>
+        
+        <div class="class-stats">
+            {% for class in class_stats %}
+            <div class="activity-item">
+                <div class="activity-icon" style="background: linear-gradient(135deg, #9e2a2b, #6b1d1e);">
+                    👨‍🏫
+                </div>
+                <div class="activity-details">
+                    <h6 class="mb-1">{{ class.classroom.name }}</h6>
+                    <p class="mb-0 small text-muted">حاضر: {{ class.present }} از {{ class.total }}</p>
+                </div>
+                <div class="activity-time">
+                    <span class="badge {% if class.percentage >= 80 %}bg-success{% elif class.percentage >= 50 %}badge-warning{% else %}bg-danger{% endif %}">
+                        {{ class.percentage }}%
+                    </span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">🏫<p>اطلاعات کلاس‌ها موجود نیست</p></div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="system-health {{ system_health.status }} animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-1">❤️ وضعیت سیستم</h5>
+            <p class="mb-0 text-muted small">آخرین بررسی: {{ now|date:"H:i" }}</p>
+        </div>
+        <span class="badge {% if system_health.status == 'health-good' %}bg-success{% elif system_health.status == 'health-warning' %}" style="background: var(--warning); color: white;{% else %}bg-danger{% endif %}">
+            {% if system_health.status == 'health-good' %}سالم{% elif system_health.status == 'health-warning' %}هشدار{% else %}نیاز به بررسی{% endif %}
+        </span>
+    </div>
+    
+    <div class="health-metrics">
+        <div class="health-metric"><div class="metric-value">{{ system_health.face_count }}</div><div class="metric-label">چهره بارگذاری شده</div></div>
+        <div class="health-metric"><div class="metric-value">{{ system_health.online_cameras }}</div><div class="metric-label">دوربین آنلاین</div></div>
+        <div class="health-metric"><div class="metric-value">{{ system_health.disk_usage|floatformat:1 }}%</div><div class="metric-label">استفاده از دیسک</div></div>
+        <div class="health-metric"><div class="metric-value">{{ stats.absent_today }}</div><div class="metric-label">غایب امروز</div></div>
+    </div>
+    
+    {% if system_health.issues %}
+    <div class="mt-4">
+        <h6 class="mb-3">⚠️ مشکلات شناسایی شده</h6>
+        <div class="alert alert-warning"><ul class="mb-0">{% for issue in system_health.issues %}<li>{{ issue }}</li>{% endfor %}</ul></div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="recent-card animate__fadeIn">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">⏰ دانش‌آموزان غایب امروز</h5>
+                <span class="badge bg-danger">{{ stats.absent_today }}</span>
+            </div>
+            <div class="absent-list">
+                {% for student in absent_students|slice:":5" %}
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: linear-gradient(135deg, #c1121f, #8b0e18);">⏰</div>
+                    <div class="activity-details">
+                        <h6 class="mb-1">{{ student.name }}</h6>
+                        <p class="mb-0 small text-muted">{{ student.classroom }}{% if student.last_seen %} آخرین حضور: {{ student.last_seen.date|date:"Y/m/d" }}{% endif %}</p>
+                    </div>
+                    <div class="activity-time"><a href="{% url 'verifi:student_detail' student.id %}" class="btn btn-sm btn-outline-primary">مشاهده</a></div>
+                </div>
+                {% empty %}
+                <div class="empty-state">✅<p>همه دانش‌آموزان حاضر هستند</p></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="recent-card animate__fadeIn">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">🚀 اقدامات سریع</h5>
+                <span class="icon-rocket"></span>
+            </div>
+            <div class="row g-3">
+                <div class="col-6"><a href="{% url 'verifi:live_detection_view' %}" class="btn btn-primary w-100 d-flex flex-column align-items-center py-3">📡<span class="mt-1">تشخیص لایو</span></a></div>
+                <div class="col-6"><a href="{% url 'verifi:search_student' %}" class="btn btn-success w-100 d-flex flex-column align-items-center py-3">🔍<span class="mt-1">جستجوی دانش‌آموز</span></a></div>
+                <div class="col-6"><a href="{% url 'verifi:register_student' %}" class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-3">👤<span class="mt-1">ثبت دانش‌آموز جدید</span></a></div>
+                <div class="col-6"><a href="{% url 'verifi:camera_map_view' %}" class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3">🗺️<span class="mt-1">نقشه دوربین‌ها</span></a></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateSystemStatus() {
+        fetch('/api/system-status/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.online_cameras !== undefined) {
+                    const cameraStat = document.querySelector('.quick-stat.cameras .stat-number');
+                    if (cameraStat) cameraStat.textContent = `${data.online_cameras}/${data.total_cameras}`;
+                }
+            })
+            .catch(() => {});
+    }
+    setInterval(updateSystemStatus, 30000);
+});
+</script>
+{% endblock %}

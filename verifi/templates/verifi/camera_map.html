@@ -1,0 +1,877 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}نقشه دوربین‌ها - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}نقشه دوربین‌ها{% endblock %}
+{% block page_subtitle %}نمایش موقعیت و وضعیت دوربین‌های مدارس{% endblock %}
+
+{% block extra_css %}
+<style>
+    .map-container {
+        position: relative;
+        height: 600px;
+        background: #f8f9fa;
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+    
+    .map-background {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.9;
+    }
+    
+    .camera-marker {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        z-index: 10;
+        transform-origin: center;
+    }
+    
+    .camera-marker:hover {
+        transform: scale(1.2);
+        z-index: 100;
+    }
+    
+    .camera-marker.online {
+        background: rgba(76, 201, 240, 0.9);
+        border: 3px solid white;
+        box-shadow: 0 5px 15px rgba(76, 201, 240, 0.5);
+    }
+    
+    .camera-marker.offline {
+        background: rgba(249, 65, 68, 0.9);
+        border: 3px solid white;
+        box-shadow: 0 5px 15px rgba(249, 65, 68, 0.5);
+    }
+    
+    .camera-marker.warning {
+        background: rgba(248, 150, 30, 0.9);
+        border: 3px solid white;
+        box-shadow: 0 5px 15px rgba(248, 150, 30, 0.5);
+    }
+    
+    .camera-marker i {
+        color: white;
+        font-size: 1.2rem;
+    }
+    
+    .camera-tooltip {
+        position: absolute;
+        bottom: 100%;
+        right: 50%;
+        transform: translateX(50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        white-space: nowrap;
+        font-size: 0.9rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        pointer-events: none;
+        z-index: 1000;
+        min-width: 200px;
+    }
+    
+    .camera-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        right: 50%;
+        transform: translateX(50%);
+        border-width: 8px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+    }
+    
+    .camera-marker:hover .camera-tooltip {
+        opacity: 1;
+        visibility: visible;
+        bottom: 120%;
+    }
+    
+    .tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    
+    .camera-name {
+        font-weight: 600;
+        color: white;
+    }
+    
+    .camera-status {
+        font-size: 0.8rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+    
+    .status-online {
+        background: var(--success);
+    }
+    
+    .status-offline {
+        background: var(--danger);
+    }
+    
+    .status-warning {
+        background: var(--warning);
+    }
+    
+    .tooltip-details {
+        font-size: 0.85rem;
+        color: #ddd;
+        margin-top: 5px;
+    }
+    
+    .map-controls {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 20;
+    }
+    
+    .control-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+    }
+    
+    .control-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .control-btn i {
+        color: var(--primary);
+        font-size: 1.2rem;
+    }
+    
+    .stats-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        padding: 25px;
+        border-radius: var(--radius);
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-card.online {
+        background: linear-gradient(135deg, rgba(76, 201, 240, 0.1), rgba(76, 201, 240, 0.2));
+        border: 2px solid var(--success);
+    }
+    
+    .stat-card.offline {
+        background: linear-gradient(135deg, rgba(249, 65, 68, 0.1), rgba(249, 65, 68, 0.2));
+        border: 2px solid var(--danger);
+    }
+    
+    .stat-card.total {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.2));
+        border: 2px solid var(--primary);
+    }
+    
+    .stat-card.activity {
+        background: linear-gradient(135deg, rgba(248, 150, 30, 0.1), rgba(248, 150, 30, 0.2));
+        border: 2px solid var(--warning);
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .stat-card.online .stat-icon {
+        color: var(--success);
+    }
+    
+    .stat-card.offline .stat-icon {
+        color: var(--danger);
+    }
+    
+    .stat-card.total .stat-icon {
+        color: var(--primary);
+    }
+    
+    .stat-card.activity .stat-icon {
+        color: var(--warning);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: var(--dark);
+        font-weight: 600;
+    }
+    
+    .camera-details-modal {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .camera-details-content {
+        width: 90%;
+        max-width: 500px;
+        background: white;
+        border-radius: var(--radius);
+        overflow: hidden;
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    .camera-details-header {
+        padding: 25px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .camera-details-body {
+        padding: 25px;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .detail-label {
+        color: var(--gray);
+        font-weight: 500;
+    }
+    
+    .detail-value {
+        color: var(--dark);
+        font-weight: 600;
+    }
+    
+    .live-preview {
+        width: 100%;
+        height: 200px;
+        border-radius: var(--radius);
+        overflow: hidden;
+        margin: 20px 0;
+        background: #000;
+    }
+    
+    .live-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 25px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 100px 20px;
+        color: var(--gray);
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(50px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 768px) {
+        .map-container {
+            height: 400px;
+        }
+        
+        .stats-panel {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .camera-details-content {
+            width: 95%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stats-panel">
+    <div class="stat-card online glass animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
+        <i class="fas fa-wifi stat-icon"></i>
+        <div class="stat-number" id="onlineCount">0</div>
+        <div class="stat-label">دوربین آنلاین</div>
+    </div>
+    
+    <div class="stat-card offline glass animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+        <i class="fas fa-plug stat-icon"></i>
+        <div class="stat-number" id="offlineCount">0</div>
+        <div class="stat-label">دوربین آفلاین</div>
+    </div>
+    
+    <div class="stat-card total glass animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+        <i class="fas fa-camera stat-icon"></i>
+        <div class="stat-number" id="totalCount">0</div>
+        <div class="stat-label">دوربین کل</div>
+    </div>
+    
+    <div class="stat-card activity glass animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+        <i class="fas fa-chart-line stat-icon"></i>
+        <div class="stat-number" id="activityCount">0</div>
+        <div class="stat-label">فعالیت امروز</div>
+    </div>
+</div>
+
+<div class="map-container glass animate__animated animate__fadeIn">
+    <img src="{% static 'images/school-map.png' %}" alt="نقشه مدرسه" class="map-background">
+    
+    <div class="map-controls">
+        <button class="control-btn" onclick="zoomIn()" title="زوم این">
+            <i class="fas fa-search-plus"></i>
+        </button>
+        <button class="control-btn" onclick="zoomOut()" title="زوم اوت">
+            <i class="fas fa-search-minus"></i>
+        </button>
+        <button class="control-btn" onclick="refreshCameras()" title="بروزرسانی">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="control-btn" onclick="resetView()" title="بازنشانی">
+            <i class="fas fa-expand"></i>
+        </button>
+    </div>
+    
+    <div id="cameraMarkers">
+        <!-- دوربین‌ها اینجا قرار می‌گیرند -->
+    </div>
+    
+    <div class="map-legend" style="position: absolute; bottom: 20px; left: 20px; background: white; padding: 15px; border-radius: var(--radius); box-shadow: 0 3px 10px rgba(0,0,0,0.1);">
+        <h6 class="mb-2"><i class="fas fa-key me-2"></i>راهنما</h6>
+        <div class="d-flex align-items-center mb-2">
+            <div class="camera-marker online me-2" style="position: static; width: 20px; height: 20px;"></div>
+            <small>آنلاین</small>
+        </div>
+        <div class="d-flex align-items-center mb-2">
+            <div class="camera-marker offline me-2" style="position: static; width: 20px; height: 20px;"></div>
+            <small>آفلاین</small>
+        </div>
+        <div class="d-flex align-items-center">
+            <div class="camera-marker warning me-2" style="position: static; width: 20px; height: 20px;"></div>
+            <small>هشدار</small>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info glass animate__animated animate__fadeIn">
+    <i class="fas fa-info-circle"></i>
+    برای مشاهده جزئیات هر دوربین، روی آیکون آن کلیک کنید. برای جابجایی دوربین‌ها، آنها را با موس درگ کنید.
+</div>
+
+<div class="camera-details-modal" id="cameraDetailsModal">
+    <div class="camera-details-content glass">
+        <div class="camera-details-header">
+            <div>
+                <h4 id="modalCameraName" class="mb-1"></h4>
+                <p id="modalCameraStatus" class="mb-0 small"></p>
+            </div>
+            <button class="btn btn-light btn-sm" onclick="closeCameraDetails()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="camera-details-body">
+            <div class="live-preview">
+                <img id="modalCameraFeed" src="" alt="پخش زنده">
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">موقعیت:</span>
+                <span class="detail-value" id="modalCameraLocation"></span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">نوع دوربین:</span>
+                <span class="detail-value" id="modalCameraType"></span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">آخرین فعالیت:</span>
+                <span class="detail-value" id="modalCameraLastSeen"></span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">حضور امروز:</span>
+                <span class="detail-value" id="modalCameraAttendance"></span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">ناشناس امروز:</span>
+                <span class="detail-value" id="modalCameraUnknown"></span>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="viewLiveFeed()">
+                    <i class="fas fa-play"></i>
+                    مشاهده پخش زنده
+                </button>
+                <button class="btn btn-outline-primary" onclick="editCameraPosition()">
+                    <i class="fas fa-edit"></i>
+                    ویرایش موقعیت
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="glass p-4 animate__animated animate__fadeIn">
+            <h5 class="mb-3">
+                <i class="fas fa-list me-2"></i>
+                لیست دوربین‌ها
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>نام دوربین</th>
+                            <th>موقعیت</th>
+                            <th>وضعیت</th>
+                            <th>آخرین فعالیت</th>
+                            <th>اقدامات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="camerasTableBody">
+                        <!-- دوربین‌ها اینجا لود می‌شوند -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="glass p-4 animate__animated animate__fadeIn">
+            <h5 class="mb-3">
+                <i class="fas fa-plus-circle me-2"></i>
+                افزودن دوربین جدید
+            </h5>
+            <button class="btn btn-success w-100 mb-3" onclick="addNewCamera()">
+                <i class="fas fa-plus"></i>
+                دوربین جدید
+            </button>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-lightbulb"></i>
+                <small>برای افزودن دوربین جدید، روی دکمه بالا کلیک کنید. پس از افزودن، می‌توانید موقعیت آن را روی نقشه تنظیم کنید.</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let cameras = [];
+    let selectedCamera = null;
+    let mapScale = 1;
+    
+    // بارگذاری دوربین‌ها
+    loadCameras();
+    
+    // به‌روزرسانی دوربین‌ها هر 30 ثانیه
+    setInterval(loadCameras, 30000);
+    
+    function loadCameras() {
+        fetch('/api/camera-status/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cameras = data.cameras;
+                    updateCameraStats(data.cameras);
+                    renderCameraMarkers(data.cameras);
+                    renderCamerasTable(data.cameras);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('خطا در بارگذاری دوربین‌ها', 'error');
+            });
+    }
+    
+    function updateCameraStats(cameraList) {
+        const online = cameraList.filter(c => c.status === 'online').length;
+        const offline = cameraList.filter(c => c.status === 'offline').length;
+        const total = cameraList.length;
+        const activity = cameraList.reduce((sum, c) => sum + (c.today_attendances || 0), 0);
+        
+        document.getElementById('onlineCount').textContent = online;
+        document.getElementById('offlineCount').textContent = offline;
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('activityCount').textContent = activity;
+    }
+    
+    function renderCameraMarkers(cameraList) {
+        const markersContainer = document.getElementById('cameraMarkers');
+        markersContainer.innerHTML = '';
+        
+        cameraList.forEach(camera => {
+            const marker = document.createElement('div');
+            marker.className = `camera-marker ${camera.status}`;
+            marker.style.left = `${camera.map_x || 50}%`;
+            marker.style.top = `${camera.map_y || 50}%`;
+            marker.dataset.cameraId = camera.id;
+            
+            marker.innerHTML = `
+                <i class="fas fa-camera"></i>
+                <div class="camera-tooltip">
+                    <div class="tooltip-header">
+                        <span class="camera-name">${camera.name}</span>
+                        <span class="camera-status status-${camera.status}">${camera.status === 'online' ? 'آنلاین' : camera.status === 'offline' ? 'آفلاین' : 'هشدار'}</span>
+                    </div>
+                    <div class="tooltip-details">
+                        <div>موقعیت: ${camera.location}</div>
+                        <div>آخرین فعالیت: ${camera.last_seen}</div>
+                        <div>حضور امروز: ${camera.today_attendances || 0} نفر</div>
+                    </div>
+                </div>
+            `;
+            
+            // قابلیت درگ کردن
+            makeDraggable(marker);
+            
+            // کلیک برای مشاهده جزئیات
+            marker.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showCameraDetails(camera);
+            });
+            
+            markersContainer.appendChild(marker);
+        });
+    }
+    
+    function makeDraggable(element) {
+        let isDragging = false;
+        let startX, startY;
+        
+        element.addEventListener('mousedown', startDrag);
+        element.addEventListener('touchstart', startDrag);
+        
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            
+            if (e.type === 'mousedown') {
+                startX = e.clientX;
+                startY = e.clientY;
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', stopDrag);
+            } else {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                document.addEventListener('touchmove', onDrag);
+                document.addEventListener('touchend', stopDrag);
+            }
+        }
+        
+        function onDrag(e) {
+            if (!isDragging) return;
+            
+            let clientX, clientY;
+            if (e.type === 'mousemove') {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            } else {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            
+            const deltaX = clientX - startX;
+            const deltaY = clientY - startY;
+            
+            const rect = element.parentElement.getBoundingClientRect();
+            const currentLeft = parseFloat(element.style.left) || 0;
+            const currentTop = parseFloat(element.style.top) || 0;
+            
+            const newLeft = currentLeft + (deltaX / rect.width) * 100;
+            const newTop = currentTop + (deltaY / rect.height) * 100;
+            
+            // محدود کردن به محدوده نقشه
+            element.style.left = Math.max(0, Math.min(100, newLeft)) + '%';
+            element.style.top = Math.max(0, Math.min(100, newTop)) + '%';
+            
+            startX = clientX;
+            startY = clientY;
+            
+            // ذخیره موقعیت جدید
+            const cameraId = element.dataset.cameraId;
+            updateCameraPosition(cameraId, newLeft, newTop);
+        }
+        
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+    }
+    
+    function updateCameraPosition(cameraId, x, y) {
+        fetch(`/api/update-camera-position/${cameraId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ x: x, y: y })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Error updating position:', data.message);
+            }
+        })
+        .catch(console.error);
+    }
+    
+    function renderCamerasTable(cameraList) {
+        const tableBody = document.getElementById('camerasTableBody');
+        tableBody.innerHTML = '';
+        
+        cameraList.forEach(camera => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="camera-marker ${camera.status}" style="position: static; width: 20px; height: 20px; margin-left: 10px;">
+                            <i class="fas fa-camera" style="font-size: 0.8rem;"></i>
+                        </div>
+                        <span>${camera.name}</span>
+                    </div>
+                </td>
+                <td>${camera.location}</td>
+                <td>
+                    <span class="badge ${camera.status === 'online' ? 'bg-success' : camera.status === 'offline' ? 'bg-danger' : 'bg-warning'}">
+                        ${camera.status === 'online' ? 'آنلاین' : camera.status === 'offline' ? 'آفلاین' : 'هشدار'}
+                    </span>
+                </td>
+                <td>${camera.last_seen || 'نامشخص'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showCameraDetails(${camera.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+    
+    function showCameraDetails(camera) {
+        selectedCamera = camera;
+        
+        document.getElementById('modalCameraName').textContent = camera.name;
+        document.getElementById('modalCameraLocation').textContent = camera.location;
+        document.getElementById('modalCameraType').textContent = camera.type === 'webcam' ? 'وب‌کم' : 'دوربین IP';
+        document.getElementById('modalCameraLastSeen').textContent = camera.last_seen;
+        document.getElementById('modalCameraAttendance').textContent = `${camera.today_attendances || 0} نفر`;
+        document.getElementById('modalCameraUnknown').textContent = `${camera.today_unknown || 0} نفر`;
+        
+        const statusElement = document.getElementById('modalCameraStatus');
+        if (camera.status === 'online') {
+            statusElement.innerHTML = '<span class="badge bg-success">آنلاین</span>';
+            statusElement.style.color = 'white';
+        } else if (camera.status === 'offline') {
+            statusElement.innerHTML = '<span class="badge bg-danger">آفلاین</span>';
+            statusElement.style.color = 'white';
+        } else {
+            statusElement.innerHTML = '<span class="badge bg-warning">هشدار</span>';
+            statusElement.style.color = 'white';
+        }
+        
+        if (camera.stream_url) {
+            document.getElementById('modalCameraFeed').src = camera.stream_url;
+        } else {
+            document.getElementById('modalCameraFeed').src = '{% static "images/no-camera.jpg" %}';
+        }
+        
+        document.getElementById('cameraDetailsModal').style.display = 'flex';
+    }
+    
+    function closeCameraDetails() {
+        document.getElementById('cameraDetailsModal').style.display = 'none';
+        selectedCamera = null;
+    }
+    
+    function viewLiveFeed() {
+        if (selectedCamera) {
+            if (selectedCamera.type === 'webcam') {
+                window.location.href = '{% url "verifi:webcam_view" %}';
+            } else {
+                window.open(selectedCamera.stream_url, '_blank');
+            }
+        }
+    }
+    
+    function editCameraPosition() {
+        if (selectedCamera) {
+            closeCameraDetails();
+            const marker = document.querySelector(`[data-camera-id="${selectedCamera.id}"]`);
+            if (marker) {
+                marker.style.zIndex = '1000';
+                marker.style.boxShadow = '0 0 0 3px var(--primary)';
+                setTimeout(() => {
+                    marker.style.boxShadow = '';
+                }, 2000);
+            }
+        }
+    }
+    
+    function zoomIn() {
+        mapScale = Math.min(2, mapScale + 0.1);
+        updateMapScale();
+    }
+    
+    function zoomOut() {
+        mapScale = Math.max(0.5, mapScale - 0.1);
+        updateMapScale();
+    }
+    
+    function updateMapScale() {
+        const mapContainer = document.querySelector('.map-container');
+        const background = document.querySelector('.map-background');
+        const markers = document.querySelectorAll('.camera-marker');
+        
+        background.style.transform = `scale(${mapScale})`;
+        mapContainer.style.overflow = mapScale > 1 ? 'scroll' : 'hidden';
+        
+        markers.forEach(marker => {
+            marker.style.transform = `scale(${1 / mapScale})`;
+        });
+    }
+    
+    function refreshCameras() {
+        showNotification('در حال بروزرسانی دوربین‌ها...', 'info');
+        loadCameras();
+    }
+    
+    function resetView() {
+        mapScale = 1;
+        updateMapScale();
+        const mapContainer = document.querySelector('.map-container');
+        mapContainer.scrollTo(0, 0);
+    }
+    
+    function addNewCamera() {
+        showNotification('این قابلیت در نسخه بعدی اضافه خواهد شد', 'info');
+    }
+    
+    // بستن مودال با کلیک خارج از آن
+    document.getElementById('cameraDetailsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCameraDetails();
+        }
+    });
+    
+    function showNotification(message, type = 'info') {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} glass animate__animated animate__fadeIn`;
+        alert.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                              type === 'error' ? 'exclamation-circle' : 
+                              type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            ${message}
+        `;
+        
+        const messagesContainer = document.querySelector('.messages') || document.createElement('div');
+        if (!document.querySelector('.messages')) {
+            messagesContainer.className = 'messages';
+            document.querySelector('.content').prepend(messagesContainer);
+        }
+        
+        messagesContainer.prepend(alert);
+        
+        setTimeout(() => {
+            alert.classList.add('animate__fadeOut');
+            setTimeout(() => alert.remove(), 500);
+        }, 5000);
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

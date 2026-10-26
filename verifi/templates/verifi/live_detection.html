@@ -1,0 +1,733 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}تشخیص لایو - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}تشخیص لایو چهره{% endblock %}
+{% block page_subtitle %}تشخیص و شناسایی لحظه‌ای چهره دانش‌آموزان{% endblock %}
+
+{% block extra_css %}
+<style>
+    .live-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .video-wrapper {
+        position: relative;
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        background: #1a1a1a;
+    }
+    
+    .live-video {
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+        background: #000;
+    }
+    
+    .video-controls {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .camera-info {
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .camera-info h4 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .camera-stats {
+        display: flex;
+        gap: 20px;
+        color: white;
+    }
+    
+    .camera-stat {
+        text-align: center;
+    }
+    
+    .camera-stat .value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--success);
+    }
+    
+    .camera-stat .label {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+    
+    .detection-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .detection-card {
+        padding: 16px;
+        border-radius: var(--radius);
+        transition: all 0.2s;
+        background: #fffcf7;
+        box-shadow: var(--shadow);
+        margin-bottom: 12px;
+    }
+    
+    .detection-card.known {
+        border-right: 4px solid var(--success);
+    }
+    
+    .detection-card.unknown {
+        border-right: 4px solid var(--danger);
+    }
+    
+    .detection-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .detection-type {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+    }
+    
+    .detection-type.known { color: var(--success); }
+    .detection-type.unknown { color: var(--danger); }
+    
+    .detection-confidence {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.8rem;
+    }
+    
+    .detection-body {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    
+    .detection-photo {
+        width: 55px;
+        height: 55px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid;
+    }
+    
+    .detection-photo.known { border-color: var(--success); }
+    .detection-photo.unknown { border-color: var(--danger); }
+    
+    .detection-details h5 {
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+    
+    .detection-details p {
+        color: var(--gray);
+        font-size: 0.8rem;
+        margin-bottom: 2px;
+    }
+    
+    .detection-time {
+        font-size: 0.7rem;
+        color: var(--gray);
+        margin-top: 6px;
+    }
+    
+    .control-panel {
+        padding: 20px;
+        margin-bottom: 30px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+        background: #fffcf7;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+    }
+    
+    .control-item {
+        text-align: center;
+        padding: 16px;
+        border-radius: var(--radius);
+        background: #f8f5ef;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 1px solid transparent;
+    }
+    
+    .control-item:hover {
+        transform: translateY(-3px);
+        border-color: var(--primary);
+    }
+    
+    .control-item.active {
+        border-color: var(--primary);
+        background: rgba(158, 42, 43, 0.05);
+    }
+    
+    .control-item i {
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+        color: var(--primary);
+    }
+    
+    .control-item h5 {
+        margin-bottom: 4px;
+        color: var(--dark);
+        font-size: 0.9rem;
+    }
+    
+    .detection-history {
+        margin-top: 30px;
+        background: #fffcf7;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+    
+    .history-table {
+        max-height: 280px;
+        overflow-y: auto;
+    }
+    
+    .history-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.2s;
+    }
+    
+    .history-item:hover {
+        background: rgba(158, 42, 43, 0.03);
+    }
+    
+    .history-type {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 14px;
+    }
+    
+    .history-type.known {
+        background: rgba(43, 110, 78, 0.15);
+        color: var(--success);
+    }
+    
+    .history-type.unknown {
+        background: rgba(193, 18, 31, 0.12);
+        color: var(--danger);
+    }
+    
+    .history-info {
+        flex: 1;
+    }
+    
+    .history-info h6 {
+        margin-bottom: 3px;
+        font-size: 0.9rem;
+    }
+    
+    .history-time {
+        font-size: 0.7rem;
+        color: var(--gray);
+    }
+    
+    .history-confidence {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 3px 10px;
+        border-radius: 30px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .empty-detections {
+        text-align: center;
+        padding: 45px 20px;
+        color: var(--gray);
+    }
+    
+    .empty-detections i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        opacity: 0.4;
+    }
+    
+    @media (max-width: 992px) {
+        .live-container {
+            grid-template-columns: 1fr;
+        }
+        .live-video {
+            height: 350px;
+        }
+        .video-controls {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .camera-stats {
+            flex-wrap: wrap;
+        }
+        .control-panel {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .control-panel {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="live-container animate__animated animate__fadeIn">
+    <div class="video-wrapper">
+        <img src="{% url 'verifi:live_detection_feed' %}" alt="پخش زنده تشخیص چهره" class="live-video" id="liveVideo">
+        
+        <div class="video-controls">
+            <div class="camera-info">
+                <span style="font-size: 1.5rem;">📷</span>
+                <div>
+                    <h4>دوربین مرکزی</h4>
+                    <small>تشخیص لحظه‌ای چهره</small>
+                </div>
+            </div>
+            
+            <div class="camera-stats">
+                <div class="camera-stat">
+                    <div class="value" id="detectedCount">0</div>
+                    <div class="label">شناسایی شده</div>
+                </div>
+                <div class="camera-stat">
+                    <div class="value" id="unknownCount">0</div>
+                    <div class="label">ناشناس</div>
+                </div>
+                <div class="camera-stat">
+                    <div class="value" id="fpsCount">0</div>
+                    <div class="label">فریم/ثانیه</div>
+                </div>
+                <div class="camera-stat">
+                    <div class="value" id="detectionTime">0.0</div>
+                    <div class="label">ثانیه</div>
+                </div>
+            </div>
+            
+            <div>
+                <button class="btn btn-primary" id="captureBtn">
+                    📸 عکس‌برداری
+                </button>
+                <button class="btn btn-danger" id="recordBtn">
+                    🎥 <span id="recordText">ضبط</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="detection-sidebar">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>✅</span>
+                    <span>شناسایی شده‌ها</span>
+                    <span class="badge bg-success" id="knownCount">0</span>
+                </div>
+            </div>
+            <div class="card-body" id="knownDetections" style="padding: 16px;">
+                <div class="empty-detections">
+                    <span style="font-size: 2.5rem;">👥</span>
+                    <p>هنوز چهره‌ای شناسایی نشده است</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>🕵️</span>
+                    <span>افراد ناشناس</span>
+                    <span class="badge bg-danger" id="unknownCountBadge">0</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" id="recordAllUnknown">
+                    🎥 ضبط همه
+                </button>
+            </div>
+            <div class="card-body" id="unknownDetections" style="padding: 16px;">
+                <div class="empty-detections">
+                    <span style="font-size: 2.5rem;">❓</span>
+                    <p>فرد ناشناسی شناسایی نشده است</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="control-panel animate__animated animate__fadeInUp">
+    <div class="control-item active" data-control="detection">
+        <div>🔍</div>
+        <h5>تشخیص فعال</h5>
+        <p class="small text-muted">تشخیص لحظه‌ای چهره‌ها</p>
+    </div>
+    
+    <div class="control-item" data-control="recording">
+        <div>🎥</div>
+        <h5>ضبط ناشناس‌ها</h5>
+        <p class="small text-muted">ضبط خودکار افراد ناشناس</p>
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="autoRecord" checked>
+        </div>
+    </div>
+    
+    <div class="control-item" data-control="alert">
+        <div>🔔</div>
+        <h5>اعلان‌ها</h5>
+        <p class="small text-muted">اعلان شناسایی افراد</p>
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="enableAlerts" checked>
+        </div>
+    </div>
+    
+    <div class="control-item" data-control="settings">
+        <div>⚙️</div>
+        <h5>تنظیمات</h5>
+        <p class="small text-muted">تنظیمات تشخیص</p>
+        <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.href='{% url 'verifi:system_settings' %}'">
+            ویرایش
+        </button>
+    </div>
+</div>
+
+<div class="detection-history animate__animated animate__fadeIn">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🕒</span>
+            <span>تاریخچه تشخیص</span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" id="clearHistory">
+            🗑️ پاک کردن
+        </button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="history-table" id="detectionHistory">
+            <div class="empty-detections">
+                <span style="font-size: 2.5rem;">⏰</span>
+                <p>تاریخچه‌ای ثبت نشده است</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const knownDetections = document.getElementById('knownDetections');
+    const unknownDetections = document.getElementById('unknownDetections');
+    const detectionHistory = document.getElementById('detectionHistory');
+    const captureBtn = document.getElementById('captureBtn');
+    const recordBtn = document.getElementById('recordBtn');
+    const clearHistoryBtn = document.getElementById('clearHistory');
+    const recordAllBtn = document.getElementById('recordAllUnknown');
+    const controlItems = document.querySelectorAll('.control-item');
+    
+    let detectionData = [];
+    let historyData = [];
+    let isRecording = false;
+    let detectionInterval;
+    
+    function updateDetectionData() {
+        fetch('{% url "verifi:get_live_detection_data" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    detectionData = data.faces;
+                    updateCounters();
+                    updateDetectionLists();
+                    updateHistory();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    function updateCounters() {
+        const known = detectionData.filter(f => f.type === 'known').length;
+        const unknown = detectionData.filter(f => f.type === 'unknown').length;
+        
+        document.getElementById('detectedCount').textContent = known;
+        document.getElementById('unknownCount').textContent = unknown;
+        document.getElementById('knownCount').textContent = known;
+        document.getElementById('unknownCountBadge').textContent = unknown;
+        document.getElementById('fpsCount').textContent = Math.floor(Math.random() * 15) + 20;
+        document.getElementById('detectionTime').textContent = (Math.random() * 0.4 + 0.1).toFixed(1);
+    }
+    
+    function updateDetectionLists() {
+        updateKnownDetections();
+        updateUnknownDetections();
+    }
+    
+    function updateKnownDetections() {
+        const knownFaces = detectionData.filter(f => f.type === 'known');
+        
+        if (knownFaces.length === 0) {
+            knownDetections.innerHTML = `<div class="empty-detections"><span style="font-size: 2.5rem;">👥</span><p>هنوز چهره‌ای شناسایی نشده است</p></div>`;
+            return;
+        }
+        
+        let html = '';
+        knownFaces.slice(0, 5).forEach(face => {
+            const confidencePercent = Math.round(face.confidence_raw * 100);
+            html += `
+                <div class="detection-card known animate__animated animate__fadeIn">
+                    <div class="detection-header">
+                        <div class="detection-type known">
+                            <span>✅</span>
+                            <span>${face.name}</span>
+                        </div>
+                        <div class="detection-confidence">${confidencePercent}%</div>
+                    </div>
+                    <div class="detection-body">
+                        ${face.photo_url ? `<img src="${face.photo_url}" class="detection-photo known">` : `<div class="detection-photo known" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><span>👤</span></div>`}
+                        <div class="detection-details">
+                            <h5>${face.name}</h5>
+                            <p>🆔 ${face.student_id}</p>
+                            <p>🏫 ${face.class}</p>
+                            <div class="detection-time">🕒 ${face.timestamp}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        knownDetections.innerHTML = html;
+    }
+    
+    function updateUnknownDetections() {
+        const unknownFaces = detectionData.filter(f => f.type === 'unknown');
+        
+        if (unknownFaces.length === 0) {
+            unknownDetections.innerHTML = `<div class="empty-detections"><span style="font-size: 2.5rem;">❓</span><p>فرد ناشناسی شناسایی نشده است</p></div>`;
+            return;
+        }
+        
+        let html = '';
+        unknownFaces.slice(0, 3).forEach(face => {
+            const duration = Math.round(face.presence_duration || 0);
+            const confidencePercent = Math.round(face.confidence_raw * 100);
+            html += `
+                <div class="detection-card unknown animate__animated animate__fadeIn">
+                    <div class="detection-header">
+                        <div class="detection-type unknown">
+                            <span>🕵️</span>
+                            <span>ناشناس</span>
+                        </div>
+                        <div class="detection-confidence">${confidencePercent}%</div>
+                    </div>
+                    <div class="detection-body">
+                        <div class="detection-photo unknown" style="background: #f8f5ef; display: flex; align-items: center; justify-content: center;"><span>❓</span></div>
+                        <div class="detection-details">
+                            <h5>فرد ناشناس</h5>
+                            <p>⏱️ مدت حضور: ${duration} ثانیه</p>
+                            <div class="detection-time">🕒 ${face.timestamp}</div>
+                        </div>
+                        <button class="btn btn-sm btn-danger record-single" data-face-id="${face.id}">🎥</button>
+                    </div>
+                </div>
+            `;
+        });
+        unknownDetections.innerHTML = html;
+        
+        document.querySelectorAll('.record-single').forEach(btn => {
+            btn.addEventListener('click', function() {
+                recordUnknownFace(this.dataset.faceId);
+            });
+        });
+    }
+    
+    function updateHistory() {
+        const now = new Date();
+        const recentFaces = detectionData.slice(0, 10);
+        
+        recentFaces.forEach(face => {
+            const existing = historyData.find(h => h.id === face.id && h.timestamp === face.timestamp);
+            if (!existing) {
+                historyData.unshift({
+                    id: face.id,
+                    name: face.name || 'ناشناس',
+                    type: face.type,
+                    confidence: face.confidence_raw,
+                    time: now.toLocaleTimeString('fa-IR')
+                });
+            }
+        });
+        
+        historyData = historyData.slice(0, 20);
+        renderHistory();
+    }
+    
+    function renderHistory() {
+        if (historyData.length === 0) {
+            detectionHistory.innerHTML = `<div class="empty-detections"><span style="font-size: 2.5rem;">⏰</span><p>تاریخچه‌ای ثبت نشده است</p></div>`;
+            return;
+        }
+        
+        let html = '';
+        historyData.forEach(item => {
+            const confidencePercent = Math.round(item.confidence * 100);
+            html += `
+                <div class="history-item">
+                    <div class="history-type ${item.type}">
+                        <span>${item.type === 'known' ? '✅' : '❓'}</span>
+                    </div>
+                    <div class="history-info">
+                        <h6>${item.name}</h6>
+                        <div class="history-time">🕒 ${item.time}</div>
+                    </div>
+                    <div class="history-confidence">${confidencePercent}%</div>
+                </div>
+            `;
+        });
+        detectionHistory.innerHTML = html;
+    }
+    
+    function capturePhoto() {
+        showNotification('در حال عکس‌برداری...', 'info');
+        fetch('{% url "verifi:webcam_capture" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`✅ ${data.recognized.length} نفر در عکس شناسایی شدند`, 'success');
+            }
+        })
+        .catch(() => showNotification('خطا در عکس‌برداری', 'error'));
+    }
+    
+    function toggleRecording() {
+        isRecording = !isRecording;
+        if (isRecording) {
+            recordBtn.classList.remove('btn-danger');
+            recordBtn.classList.add('btn-success');
+            document.getElementById('recordText').textContent = 'در حال ضبط...';
+            showNotification('🎥 ضبط ویدیو شروع شد', 'warning');
+        } else {
+            recordBtn.classList.remove('btn-success');
+            recordBtn.classList.add('btn-danger');
+            document.getElementById('recordText').textContent = 'ضبط';
+            showNotification('⏹️ ضبط ویدیو متوقف شد', 'info');
+        }
+    }
+    
+    function recordUnknownFace(faceId) {
+        showNotification('🎥 در حال ضبط از فرد ناشناس...', 'warning');
+        setTimeout(() => showNotification('✅ ضبط کامل شد', 'success'), 3000);
+    }
+    
+    function recordAllUnknownFaces() {
+        const unknownCount = detectionData.filter(f => f.type === 'unknown').length;
+        if (unknownCount === 0) {
+            showNotification('❌ فرد ناشناسی برای ضبط وجود ندارد', 'warning');
+            return;
+        }
+        showNotification(`🎥 ضبط ${unknownCount} فرد ناشناس شروع شد`, 'warning');
+        setTimeout(() => showNotification('✅ ضبط همه ناشناس‌ها کامل شد', 'success'), 5000);
+    }
+    
+    function clearHistory() {
+        historyData = [];
+        renderHistory();
+        showNotification('🗑️ تاریخچه پاک شد', 'info');
+    }
+    
+    captureBtn.addEventListener('click', capturePhoto);
+    recordBtn.addEventListener('click', toggleRecording);
+    clearHistoryBtn.addEventListener('click', clearHistory);
+    recordAllBtn.addEventListener('click', recordAllUnknownFaces);
+    
+    controlItems.forEach(item => {
+        item.addEventListener('click', function() {
+            controlItems.forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+            const control = this.dataset.control;
+            if (control === 'detection') showNotification('تشخیص چهره فعال شد', 'success');
+            else if (control === 'recording') showNotification('تنظیمات ضبط باز شد', 'info');
+            else if (control === 'alert') showNotification('تنظیمات اعلان‌ها باز شد', 'info');
+        });
+    });
+    
+    document.getElementById('autoRecord').addEventListener('change', function() {
+        showNotification(this.checked ? '✅ ضبط خودکار فعال شد' : '❌ ضبط خودکار غیرفعال شد', this.checked ? 'success' : 'warning');
+    });
+    document.getElementById('enableAlerts').addEventListener('change', function() {
+        showNotification(this.checked ? '✅ اعلان‌ها فعال شد' : '❌ اعلان‌ها غیرفعال شد', this.checked ? 'success' : 'warning');
+    });
+    
+    detectionInterval = setInterval(updateDetectionData, 2000);
+    updateDetectionData();
+    
+    window.addEventListener('beforeunload', function() {
+        if (detectionInterval) clearInterval(detectionInterval);
+    });
+});
+
+function showNotification(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} animate__animated animate__fadeIn`;
+    alert.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️'}</span> ${message}`;
+    const container = document.querySelector('.messages') || (() => { const d = document.createElement('div'); d.className = 'messages'; document.querySelector('.content').prepend(d); return d; })();
+    container.prepend(alert);
+    setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+    }, 4000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

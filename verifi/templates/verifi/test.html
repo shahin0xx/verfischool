@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ارائه وریفای - سیستم احراز هویت هوشمند با تشخیص چهره</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'IranSans', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* حالت نمایش اسلاید */
+        .presentation-wrapper {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .slides-container {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease-in-out;
+            overflow-y: auto;
+            padding: 2rem 3rem;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 10;
+        }
+
+        /* اسکرول اسلاید */
+        .slide::-webkit-scrollbar {
+            width: 6px;
+        }
+        .slide::-webkit-scrollbar-track {
+            background: #334155;
+            border-radius: 10px;
+        }
+        .slide::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 10px;
+        }
+
+        /* محتوای اسلاید */
+        .slide-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            padding: 2rem 2.5rem;
+            border: 1px solid rgba(59,130,246,0.3);
+        }
+
+        .slide-number {
+            font-size: 0.75rem;
+            color: #3b82f6;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            border-right: 3px solid #3b82f6;
+            padding-right: 0.6rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #3b82f6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            border-right: 5px solid #3b82f6;
+            padding-right: 1rem;
+            margin: 0.5rem 0 1.2rem 0;
+            color: #f1f5f9;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 0.8rem 0 0.5rem;
+            color: #93c5fd;
+        }
+
+        .badge {
+            background: rgba(59,130,246,0.2);
+            color: #93c5fd;
+            border-radius: 30px;
+            padding: 0.2rem 0.9rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+            margin: 0.2rem;
+        }
+
+        .grid-2, .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card {
+            background: rgba(30,41,59,0.8);
+            border-radius: 1.2rem;
+            padding: 1.2rem;
+            border: 1px solid #334155;
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-3px);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #3b82f6;
+        }
+
+        .formula {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            padding: 0.3rem 0.8rem;
+            border-radius: 10px;
+            display: inline-block;
+            color: #facc15;
+        }
+
+        hr {
+            margin: 1rem 0;
+            border: none;
+            height: 1px;
+            background: #334155;
+        }
+
+        /* دکمه‌های ناوبری */
+        .nav-buttons {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            right: 2rem;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 3rem;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            background: #2563eb;
+            transform: scale(1.02);
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            z-index: 100;
+            border: 1px solid #3b82f6;
+        }
+
+        .fullscreen-btn {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            background: #1e293b;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 1rem;
+            }
+            .slide-content {
+                padding: 1.2rem;
+            }
+            h1 {
+                font-size: 1.6rem;
+            }
+            h2 {
+                font-size: 1.3rem;
+            }
+            .nav-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* انیمیشن */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide.active .slide-content {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <button class="fullscreen-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i> تمام صفحه</button>
+    <div class="presentation-wrapper">
+        <div class="slides-container" id="slidesContainer">
+            <!-- اسلاید 1 -->
+            <div class="slide active" data-index="0">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 1</div>
+                    <h1><i class="fas fa-id-card"></i> وریفای - سیستم احراز هویت هوشمند با تشخیص چهره</h1>
+                    <p style="font-size:1.2rem; margin-top:1rem;"><strong>محمد امین صمدی</strong> – تخصص بک‌اند و طراحی وب</p>
+                    <p><strong>بهنام دهنوی</strong> – تخصص فرانت‌اند و تجربه کاربری</p>
+                    <div class="badge"><i class="fas fa-code"></i> بیش از ۲۰ نسخه آزمایشی</div>
+                    <div class="badge"><i class="fas fa-check-circle"></i> تشخیص چهره فعال</div>
+                    <p style="margin-top:1.5rem;"><i class="fas fa-exclamation-triangle" style="color:#facc15;"></i> <strong>نکته مهم:</strong> پروژه در حال توسعه است. به دلیل مشکلات اینترنت و تحریم‌ها، نتوانستیم به موقع کامل کنیم، اما بخش تشخیص چهره و حضور و غیاب <strong>کاملاً کار می‌کند</strong>.</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 2 -->
+            <div class="slide" data-index="1">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 2</div>
+                    <h2>چرا تشخیص چهره؟ | مشکلات سیستم‌های سنتی</h2>
+                    <div class="grid-2">
+                        <div class="card"><i class="fas fa-clock"></i> <strong>زمان‌بر بودن</strong><br>مدرسه ۱۰۰۰ نفری: روزی ۲۰ دقیقه صدا زدن اسامی → سالی ۶۰ ساعت = ۲.۵ روز کامل</div>
+                        <div class="card"><i class="fas fa-user-slash"></i> <strong>خطای انسانی</strong><br>خستگی، جا افتادن اسم، ثبت اشتباه</div>
+                        <div class="card"><i class="fas fa-mask"></i> <strong>امکان تقلب</strong><br>یکی به جای دوستش پاسخ دهد یا کارت دیگران را استفاده کند</div>
+                        <div class="card"><i class="fas fa-lightbulb"></i> <strong>راه حل وریفای</strong><br>چهره یکتا، غیرقابل کپی، بدون نیاز به همکاری، تشخیص زیر نیم ثانیه</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- اسلاید 3 -->
+            <div class="slide" data-index="2">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 3</div>
+                    <h2>معماری چهار لایه | تکنولوژی‌ها</h2>
+                    <div class="grid-2">
+                        <div class="card"><i class="fas fa-video"></i> <strong>ورودی داده</strong><br>وب‌کم، USB، دوربین IP</div>
+                        <div class="card"><i class="fas fa-microchip"></i> <strong>پردازش تشخیص</strong><br>HOG + ResNet + فاصله اقلیدسی</div>
+                        <div class="card"><i class="fas fa-database"></i> <strong>ذخیره‌سازی</strong><br>SQLite، ویژگی‌های چهره، تاریخچه</div>
+                        <div class="card"><i class="fas fa-chalkboard-user"></i> <strong>رابط کاربری</strong><br>داشبورد تحت وب، کاملاً آفلاین</div>
+                    </div>
+                    <p><span class="badge">Python</span> <span class="badge">Django</span> <span class="badge">dlib</span> <span class="badge">face_recognition</span> <span class="badge">OpenCV</span></p>
+                </div>
+            </div>
+
+            <!-- اسلاید 4 -->
+            <div class="slide" data-index="3">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 4</div>
+                    <h2>مسیر پرپیچ و خم | بیش از ۲۰ نسخه آزمایشی</h2>
+                    <ul style="margin-right:1.5rem; line-height:2;">
+                        <li>نسخه ۱-۵: TensorFlow → دقت خوب، سرعت ۳ فریم/ثانیه ❌</li>
+                        <li>نسخه ۶-۱۰: OpenCV + Haar → سرعت بهتر، دقت پایین در نور کم ❌</li>
+                        <li>نسخه ۱۱-۱۵: Haar + dlib → بهبود نسبی اما رضایت‌بخش نبود ⚠️</li>
+                        <li>نسخه ۱۶-۲۰: <strong class="formula">HOG + ResNet</strong> → تعادل دقت و سرعت ✓</li>
+                    </ul>
+                    <p>نتیجه نهایی: دقت بالا + ۲۰ چهره در ثانیه روی لپ‌تاپ معمولی</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 5 -->
+            <div class="slide" data-index="4">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 5</div>
+                    <h2>قدم اول: تشخیص چهره با HOG</h2>
+                    <p><strong>HOG</strong> = هیستوگرام گرادیان‌های جهت‌دار</p>
+                    <ol style="margin-right:1.5rem; margin-top:1rem;">
+                        <li>محاسبه گرادیان (تغییر شدت نور در جهت x و y)</li>
+                        <li>قدر و جهت: <span class="formula">G = √(dx²+dy²)</span> , <span class="formula">θ = atan2(dy,dx)</span></li>
+                        <li>سلول‌های ۸×۸ و ساخت هیستوگرام جهت</li>
+                        <li>نرمالایز برای حذف اثر نور</li>
+                        <li>بردار ویژگی ~۳۷۸۰ عددی → تشخیص وجود چهره در < ۰.۰۱ ثانیه</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- اسلاید 6 -->
+            <div class="slide" data-index="5">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 6</div>
+                    <h2>قدم دوم: استخراج ویژگی با ResNet</h2>
+                    <p><strong>ResNet</strong> (شبکه باقیمانده) مشکل محو شدن گرادیان را با اتصالات پرشی حل کرد:</p>
+                    <div class="formula" style="font-size:1.1rem; margin:1rem 0;">y = F(x) + x</div>
+                    <p>مدل <code>dlib_face_recognition_resnet_model_v1.dat</code> روی میلیون‌ها چهره آموزش دیده و برای هر چهره یک <strong>بردار ۱۲۸ بعدی (embedding)</strong> تولید می‌کند.</p>
+                    <p>هر عدد نمایانگر یک ویژگی انتزاعی از چهره (فاصله چشم‌ها، ساختار استخوانی و ...)</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 7 -->
+            <div class="slide" data-index="6">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 7</div>
+                    <h2>قدم سوم: مقایسه با فاصله اقلیدسی</h2>
+                    <p>فاصله بین دو بردار ۱۲۸ بعدی:</p>
+                    <div class="formula" style="font-size:1.2rem; margin:1rem 0;">d = √ Σ (vᵢ - wᵢ)²</div>
+                    <p><strong>دقت تشخیص = 1 - d</strong> (نرمالایز شده)</p>
+                    <p>✔️ دقت ≥ ۰.۶ → شناسایی شده<br>❌ دقت < ۰.۶ → ناشناس</p>
+                    <p>مثال: فاصله ۰.۰۲۴ → دقت ۹۷.۶٪</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 8 -->
+            <div class="slide" data-index="7">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 8</div>
+                    <h2>معماری چند نخی | پردازش همزمان</h2>
+                    <div class="grid-2">
+                        <div class="card"><i class="fas fa-tachometer-alt"></i> <strong>نخ 1 - گیرنده</strong><br>دریافت فریم از دوربین + قرار دادن در صف</div>
+                        <div class="card"><i class="fas fa-brain"></i> <strong>نخ 2 - پردازشگر</strong><br>تشخیص چهره، استخراج encoding، مقایسه</div>
+                        <div class="card"><i class="fas fa-globe"></i> <strong>نخ 3 - وب سرور</strong><br>پاسخ به درخواست‌های Django</div>
+                    </div>
+                    <p>مزایا: سرعت بالا، عدم قفل شدن، مقیاس‌پذیری</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 9: نوآوری -->
+            <div class="slide" data-index="8">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 9</div>
+                    <h2><i class="fas fa-star" style="color:#facc15;"></i> ضبط خودکار افراد ناشناس | نوآوری اصلی</h2>
+                    <p>مدارس فقط دانش‌آموز ندارند: والدین، پرسنل، بازدیدکننده</p>
+                    <ol style="margin-right:1.5rem; margin-top:1rem;">
+                        <li><strong>تخصیص ID:</strong> هر چهره ناشناس یک شناسه منحصربفرد (بر اساس فاصله مرکز چهره)</li>
+                        <li><strong>شروع ضبط:</strong> اگر بیش از ۱ ثانیه در قاب بماند → شروع VideoWriter</li>
+                        <li><strong>ادامه ضبط:</strong> هر فریم به ویدیو اضافه می‌شود</li>
+                        <li><strong>پایان:</strong> اگر مدت ≥ ۱۵ ثانیه → ذخیره ویدیو و Thumbnail، در غیر اینصورت حذف</li>
+                    </ol>
+                    <p><i class="fas fa-lightbulb"></i> دلیل ۱۵ ثانیه: رد شدن سریع (<۵ ثانیه) اهمیتی ندارد، ماندگاری بیشتر نشانه قصد دارد</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 10: نتایج -->
+            <div class="slide" data-index="9">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 10</div>
+                    <h2>نتایج تست | دقت ۹۴.۷٪</h2>
+                    <div class="grid-2">
+                        <div class="card"><span class="stat-number">94.7%</span><br>دقت کلی روی ۱۰۰ دانش‌آموز</div>
+                        <div class="card"><span class="stat-number">0.05s</span><br>زمان تشخیص هر چهره (۲۰ چهره/ثانیه)</div>
+                        <div class="card"><span class="stat-number">250MB</span><br>مصرف RAM</div>
+                        <div class="card"><span class="stat-number">35-50%</span><br>مصرف CPU (لپ‌تاپ i5)</div>
+                    </div>
+                    <p>❌ تشخیص اشتباه: ۲.۱٪ &nbsp;|&nbsp; عدم تشخیص: ۳.۲٪</p>
+                    <p>محدودیت‌ها: نور خیلی کم (دقت ~۸۰٪) و چهره خیلی دور</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 11 -->
+            <div class="slide" data-index="10">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 11</div>
+                    <h2>خلاصه بخش بک‌اند</h2>
+                    <ul style="margin-right:1.5rem; line-height:2;">
+                        <li><i class="fas fa-chart-line"></i> الگوریتم‌ها: HOG، ResNet، فاصله اقلیدسی</li>
+                        <li><i class="fas fa-cogs"></i> معماری چند نخی + ضبط خودکار ناشناس (نوآوری)</li>
+                        <li><i class="fas fa-check-circle"></i> دقت ۹۴.۷٪، سرعت ۲۰ چهره/ثانیه</li>
+                        <li><i class="fas fa-code"></i> بیش از ۸۰۰۰ خط کد، ۲۰+ نسخه آزمایشی</li>
+                    </ul>
+                    <p><strong>وضعیت:</strong> بخش تشخیص و حضور و غیاب کامل کار می‌کند</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 12 -->
+            <div class="slide" data-index="11">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 12</div>
+                    <h2>بخش فرانت‌اند | ارائه بهنام دهنوی</h2>
+                    <p>سلام. من <strong>بهنام دهنوی</strong> هستم. وظیفه من تبدیل قابلیت‌های بک‌اند به یک رابط کاربری زیبا و روان بوده است.</p>
+                    <p>در ادامه، overview از صفحات اصلی را مشاهده می‌کنید.</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 13 تا 20: صفحات فرانت‌اند -->
+            <div class="slide" data-index="12">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 13</div>
+                    <h2>داشبورد مدیریت | آمار لحظه‌ای</h2>
+                    <p>چهار کارت آمار: تعداد کل دانش‌آموزان، حضور امروز، افراد ناشناس، دوربین‌های آنلاین (به‌روزرسانی هر ۳۰ ثانیه)</p>
+                    <p>لیست آخرین فعالیت‌ها و وضعیت سلامت سیستم با هشدار قرمز در صورت بروز مشکل</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="13">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 14</div>
+                    <h2>صفحه وب‌کم | عکس‌برداری دستی</h2>
+                    <p>امکانات: انتخاب دوربین، تنظیم حساسیت تشخیص، فعال/غیرفعال کردن تشخیص چند چهره، عکس‌برداری با تأخیر</p>
+                    <p>نتایج تشخیص به صورت کارت در نوار کناری (اسم، کد، کلاس، دقت)</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="14">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 15</div>
+                    <h2>صفحه تشخیص لایو | پایش لحظه‌ای</h2>
+                    <p>ویدیوی زنده از دوربین + کادر سبز/قرمز روی هر چهره با نام و دقت</p>
+                    <p>نوار کناری لیست شناسایی شده‌ها و ناشناس‌ها را به‌روز می‌کند</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="15">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 16</div>
+                    <h2>صفحه جستجوی دانش‌آموز</h2>
+                    <p>جستجو بر اساس نام، کد دانش‌آموزی، کد ملی یا کلاس</p>
+                    <p>نتایج به صورت کارت با سه دکمه: مشاهده جزئیات، ردیابی زنده، ثبت حضور دستی</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="16">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 17</div>
+                    <h2>نقشه دوربین‌ها | موقعیت روی نقشه</h2>
+                    <p>نقشه تعاملی مدرسه با آیکون‌های رنگی: سبز (آنلاین)، قرمز (آفلاین)، نارنجی (هشدار)</p>
+                    <p>مدیر می‌تواند آیکون‌ها را جابجا کند و موقعیت جدید ذخیره شود</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="17">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 18</div>
+                    <h2>صفحه تنظیمات سیستم</h2>
+                    <p>چهار تب: تشخیص چهره، اعلان‌ها، سیستم، امنیت</p>
+                    <p>ناحیه خطر: پاک کردن لاگ، بارگذاری مجدد چهره‌ها، راه‌اندازی مجدد سیستم</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="18">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 19</div>
+                    <h2>صفحه گزارش حضور | فیلتر و خروجی</h2>
+                    <p>فیلترهای پیشرفته: کلاس، دانش‌آموز، بازه تاریخ، دوربین، حداقل دقت</p>
+                    <p>خروجی Excel/CSV/JSON و چاپ مستقیم + نمودارهای آماری</p>
+                </div>
+            </div>
+
+            <div class="slide" data-index="19">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 20</div>
+                    <h2>نکات فنی فرانت‌اند</h2>
+                    <p>HTML5 + CSS3 خالص، JavaScript بدون jQuery/React، طراحی کاملاً واکنش‌گرا</p>
+                    <p>انیمیشن‌های ملایم، مودال‌ها، اعلان‌های toast، آیکون‌های بومی با Unicode</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 21: جمع‌بندی -->
+            <div class="slide" data-index="20">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 21</div>
+                    <h2>جمع‌بندی نهایی</h2>
+                    <p><strong>دستاوردها:</strong> الگوریتم HOG+ResNet، معماری چند نخی، ضبط خودکار ناشناس، دقت ۹۴.۷٪، سرعت ۲۰ چهره/ثانیه</p>
+                    <p><strong>وضعیت فعلی:</strong> تشخیص چهره و ثبت حضور کامل کار می‌کند</p>
+                    <p><strong>توسعه آینده:</strong> تشخیص با ماسک، افزایش دقت به ۹۸٪، پشتیبانی GPU</p>
+                    <hr>
+                    <p>این پروژه حاصل چند ماه کار شبانه‌روزی با چالش‌های تحریم و قطعی اینترنت بوده است.</p>
+                </div>
+            </div>
+
+            <!-- اسلاید 22: تشکر -->
+            <div class="slide" data-index="21">
+                <div class="slide-content">
+                    <div class="slide-number">اسلاید 22</div>
+                    <h2><i class="fas fa-heart" style="color:#ef4444;"></i> پرسش و پاسخ</h2>
+                    <p><strong>محمد امین صمدی & بهنام دهنوی</strong></p>
+                    <p>از اساتید محترم و همه شما بزرگواران که تا آخر ماندید، کمال تشکر را داریم.</p>
+                    <hr>
+                    <h3>سوالات احتمالی</h3>
+                    <p><strong>چرا پروژه کامل نشده؟</strong> مشکلات اینترنت و تحریم‌ها، تیم کوچک و زمان محدود. بخش اصلی (تشخیص چهره) کامل است.</p>
+                    <p><strong>چرا ۲۰ نسخه عوض کردید؟</strong> برای تعادل دقت و سرعت؛ نهایتاً HOG+ResNet جواب داد.</p>
+                    <p><strong>نوآوری پروژه چیست؟</strong> ضبط خودکار افراد ناشناس با تایمر هوشمند ۱۵ ثانیه.</p>
+                    <p style="margin-top:1.5rem;"><i class="fas fa-id-card"></i> <strong>وریفای - سیستم احراز هویت هوشمند با تشخیص چهره</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn"><i class="fas fa-chevron-right"></i> قبلی</button>
+            <button class="nav-btn" id="nextBtn">بعدی <i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="slide-counter" id="slideCounter">اسلاید 1 / 22</div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const counter = document.getElementById('slideCounter');
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                if (i === index) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+            counter.textContent = `اسلاید ${index + 1} / ${totalSlides}`;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        prevBtn.addEventListener('click', prevSlide);
+        nextBtn.addEventListener('click', nextSlide);
+
+        // صفحه کلید
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                prevSlide();
+            } else if (e.key === 'ArrowLeft') {
+                nextSlide();
+            } else if (e.key === 'Home') {
+                currentSlide = 0;
+                showSlide(currentSlide);
+            } else if (e.key === 'End') {
+                currentSlide = totalSlides - 1;
+                showSlide(currentSlide);
+            }
+        });
+
+        // تمام صفحه
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // شماره اسلاید اولیه
+        showSlide(0);
+    </script>
+</body>
+</html>

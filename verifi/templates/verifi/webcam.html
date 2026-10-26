@@ -1,0 +1,656 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}وب‌کم - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}وب‌کم{% endblock %}
+{% block page_subtitle %}عکس‌برداری و تشخیص چهره از طریق وب‌کم{% endblock %}
+
+{% block extra_css %}
+<style>
+    .webcam-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .webcam-preview {
+        position: relative;
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        background: #1a1a1a;
+    }
+    
+    .webcam-video {
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+        background: #000;
+    }
+    
+    .webcam-overlay {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        pointer-events: none;
+    }
+    
+    .webcam-guide {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+    }
+    
+    .guide-frame {
+        width: 300px;
+        height: 400px;
+        border: 3px dashed var(--primary);
+        border-radius: 20px;
+        position: relative;
+        opacity: 0.7;
+    }
+    
+    .guide-text {
+        position: absolute;
+        bottom: -40px;
+        right: 0;
+        left: 0;
+        text-align: center;
+        color: white;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 8px 12px;
+        border-radius: 30px;
+        margin: 0 20px;
+        font-size: 0.85rem;
+    }
+    
+    .webcam-controls {
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        pointer-events: all;
+    }
+    
+    .capture-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .capture-options {
+        padding: 25px;
+        border-radius: var(--radius);
+        background: #fffcf7;
+        box-shadow: var(--shadow);
+    }
+    
+    .option-group {
+        margin-bottom: 20px;
+    }
+    
+    .option-group h5 {
+        margin-bottom: 15px;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1rem;
+    }
+    
+    .option-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    
+    .results-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #fffcf7;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+    
+    .result-card {
+        padding: 16px;
+        border-radius: var(--radius);
+        margin-bottom: 12px;
+        background: rgba(158, 42, 43, 0.05);
+        border-right: 3px solid var(--success);
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .result-student {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .result-photo {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--success);
+    }
+    
+    .result-info h5 {
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+    
+    .result-info p {
+        color: var(--gray);
+        font-size: 0.8rem;
+        margin-bottom: 2px;
+    }
+    
+    .result-confidence {
+        background: rgba(43, 110, 78, 0.15);
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-weight: 700;
+        color: var(--success);
+        font-size: 0.85rem;
+    }
+    
+    .result-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .empty-results {
+        text-align: center;
+        padding: 50px 20px;
+        color: var(--gray);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .empty-results i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+    
+    .btn-capture {
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-capture:hover {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 4px rgba(158, 42, 43, 0.2);
+    }
+    
+    .btn-capture i {
+        font-size: 1.4rem;
+        color: var(--primary);
+    }
+    
+    .btn-capture.recording {
+        animation: pulseRecord 1.5s infinite;
+        border-color: var(--danger);
+    }
+    
+    .btn-capture.recording i {
+        color: var(--danger);
+    }
+    
+    @keyframes pulseRecord {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(193, 18, 31, 0.4); }
+        50% { box-shadow: 0 0 0 12px rgba(193, 18, 31, 0); }
+    }
+    
+    @media (max-width: 992px) {
+        .webcam-container {
+            grid-template-columns: 1fr;
+        }
+        .webcam-video {
+            height: 350px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="webcam-container animate__animated animate__fadeIn">
+    <div class="webcam-preview">
+        <img src="{% url 'verifi:webcam_feed' %}" alt="پخش زنده وب‌کم" class="webcam-video" id="webcamVideo">
+        
+        <div class="webcam-overlay">
+            <div class="webcam-guide">
+                <div class="guide-frame">
+                    <div class="guide-text">
+                        <i class="fas fa-user"></i>
+                        چهره خود را در این کادر قرار دهید
+                    </div>
+                </div>
+            </div>
+            
+            <div class="webcam-controls">
+                <div class="camera-selector">
+                    <div class="camera-select">
+                        <select class="form-select" id="cameraSelect" style="padding: 8px 12px; border-radius: 30px; border: 1px solid #ddd;">
+                            {% for camera in cameras %}
+                            <option value="{{ camera.id }}">{{ camera.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="btn-capture" id="captureBtn" title="عکس‌برداری">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    
+                    <button class="btn btn-danger" id="recordBtn">
+                        <i class="fas fa-video"></i>
+                        <span id="recordText">ضبط</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="capture-sidebar">
+        <div class="capture-options">
+            <div class="camera-preview">
+                <img src="{% url 'verifi:webcam_feed' %}" alt="پیش‌نمایش دوربین" style="width: 100%; border-radius: var(--radius);">
+            </div>
+            
+            <div class="camera-info mt-3">
+                <h6 style="color: var(--primary);"><i class="fas fa-info-circle"></i> اطلاعات دوربین</h6>
+                <p class="small text-muted"><i class="fas fa-camera"></i> دوربین فعال: وب‌کم لپتاپ</p>
+                <p class="small text-muted"><i class="fas fa-expand"></i> رزولوشن: 640x480</p>
+                <p class="small text-muted"><i class="fas fa-tachometer-alt"></i> نرخ فریم: 30 FPS</p>
+            </div>
+            
+            <div class="option-group">
+                <h5><i class="fas fa-sliders-h"></i> تنظیمات تشخیص</h5>
+                <div class="option-item">
+                    <span>حساسیت تشخیص</span>
+                    <input type="range" class="form-range" id="sensitivity" min="1" max="10" value="6" style="width: 100px;">
+                </div>
+                <div class="option-item">
+                    <span>تشخیص چند چهره</span>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="multiFace" checked>
+                    </div>
+                </div>
+                <div class="option-item">
+                    <span>صدای تشخیص</span>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="detectionSound" checked>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="option-group">
+                <h5><i class="fas fa-cog"></i> تنظیمات عکس</h5>
+                <div class="option-item">
+                    <span>کیفیت عکس</span>
+                    <select class="form-select form-select-sm" id="photoQuality" style="width: auto; border-radius: 20px;">
+                        <option value="high">بالا</option>
+                        <option value="medium" selected>متوسط</option>
+                        <option value="low">پایین</option>
+                    </select>
+                </div>
+                <div class="option-item">
+                    <span>تأخیر عکس‌برداری</span>
+                    <select class="form-select form-select-sm" id="captureDelay" style="width: auto; border-radius: 20px;">
+                        <option value="0">بدون تأخیر</option>
+                        <option value="3">3 ثانیه</option>
+                        <option value="5">5 ثانیه</option>
+                        <option value="10">10 ثانیه</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="results-container">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-list"></i>
+                    <span>نتایج تشخیص</span>
+                    <span class="badge bg-success" id="resultsCount">0</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" id="clearResults">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            
+            <div class="card-body" id="detectionResults" style="padding: 16px;">
+                <div class="empty-results">
+                    <i class="fas fa-camera"></i>
+                    <p>هنوز عکسی گرفته نشده است</p>
+                    <p class="text-muted small mt-2">برای شروع، دکمه عکس‌برداری را بزنید</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-history"></i>
+            <span>آخرین عکس‌های گرفته شده</span>
+        </div>
+        <a href="{% url 'verifi:attendance_report' %}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-external-link-alt"></i>
+            مشاهده همه
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="row" id="recentPhotos">
+            {% for attendance in recent_attendances|slice:":6" %}
+            {% if attendance.captured_image %}
+            <div class="col-md-4 col-lg-2 mb-3">
+                <div class="photo-thumbnail">
+                    <img src="{{ attendance.captured_image.url }}" alt="عکس تشخیص" 
+                         class="img-fluid rounded" style="height: 90px; width: 100%; object-fit: cover; border-radius: 12px;">
+                    <div class="photo-info text-center mt-2">
+                        <small>{{ attendance.student.full_name|truncatechars:15 }}</small><br>
+                        <small class="text-muted">{{ attendance.time|time:"H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-images text-muted" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                <p class="mt-3">هیچ عکسی ثبت نشده است</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const webcamVideo = document.getElementById('webcamVideo');
+    const captureBtn = document.getElementById('captureBtn');
+    const recordBtn = document.getElementById('recordBtn');
+    const clearResultsBtn = document.getElementById('clearResults');
+    const detectionResults = document.getElementById('detectionResults');
+    const resultsCount = document.getElementById('resultsCount');
+    const cameraSelect = document.getElementById('cameraSelect');
+    
+    let isRecording = false;
+    let captureCount = 0;
+    let results = [];
+    
+    function capturePhoto() {
+        const delay = parseInt(document.getElementById('captureDelay').value);
+        
+        if (delay > 0) {
+            startCountdown(delay);
+        } else {
+            takePhoto();
+        }
+    }
+    
+    function startCountdown(seconds) {
+        const originalText = captureBtn.innerHTML;
+        let remaining = seconds;
+        
+        const countdownInterval = setInterval(() => {
+            captureBtn.innerHTML = `<i class="fas fa-clock"></i> ${remaining}`;
+            captureBtn.style.background = 'var(--warning)';
+            
+            if (remaining === 0) {
+                clearInterval(countdownInterval);
+                captureBtn.innerHTML = originalText;
+                captureBtn.style.background = 'white';
+                takePhoto();
+            }
+            remaining--;
+        }, 1000);
+    }
+    
+    function takePhoto() {
+        captureBtn.style.animation = 'none';
+        setTimeout(() => {
+            captureBtn.style.animation = 'pulseRecord 0.5s';
+        }, 10);
+        
+        fetch('{% url "verifi:webcam_capture" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                captureCount++;
+                showNotification('عکس با موفقیت گرفته شد', 'success');
+                
+                if (data.recognized.length > 0) {
+                    addDetectionResults(data.recognized);
+                    playDetectionSound();
+                }
+            } else {
+                showNotification(data.message || 'خطا در عکس‌برداری', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('خطا در ارتباط با سرور', 'error');
+        });
+    }
+    
+    function addDetectionResults(recognized) {
+        results.push(...recognized);
+        resultsCount.textContent = results.length;
+        
+        let html = '';
+        recognized.forEach((student, index) => {
+            html += `
+                <div class="result-card animate__animated animate__fadeIn" style="animation-delay: ${index * 0.1}s">
+                    <div class="result-header">
+                        <div class="result-student">
+                            ${student.photo_url ? `
+                                <img src="${student.photo_url}" alt="${student.name}" class="result-photo">
+                            ` : `
+                                <div class="result-photo bg-light d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-muted"></i>
+                                </div>
+                            `}
+                            <div class="result-info">
+                                <h5>${student.name}</h5>
+                                <p><i class="fas fa-id-card"></i> ${student.student_id}</p>
+                                <p><i class="fas fa-school"></i> ${student.class}</p>
+                            </div>
+                        </div>
+                        <div class="result-confidence">
+                            ${student.confidence}
+                        </div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-sm btn-success" onclick="markAttendance(${student.id})">
+                            <i class="fas fa-check"></i>
+                            ثبت حضور
+                        </button>
+                        <a href="/student/${student.id}/" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                            مشاهده
+                        </a>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="trackStudent(${student.id})">
+                            <i class="fas fa-search-location"></i>
+                            ردیابی
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (detectionResults.querySelector('.empty-results')) {
+            detectionResults.innerHTML = html;
+        } else {
+            detectionResults.insertAdjacentHTML('afterbegin', html);
+        }
+    }
+    
+    function toggleRecording() {
+        isRecording = !isRecording;
+        
+        if (isRecording) {
+            recordBtn.classList.remove('btn-danger');
+            recordBtn.classList.add('btn-success');
+            document.getElementById('recordText').textContent = 'در حال ضبط...';
+            captureBtn.classList.add('recording');
+            showNotification('ضبط ویدیو شروع شد', 'warning');
+            startRecording();
+        } else {
+            recordBtn.classList.remove('btn-success');
+            recordBtn.classList.add('btn-danger');
+            document.getElementById('recordText').textContent = 'ضبط';
+            captureBtn.classList.remove('recording');
+            showNotification('ضبط ویدیو متوقف شد', 'info');
+            stopRecording();
+        }
+    }
+    
+    function startRecording() { showFaceIndicators(); }
+    function stopRecording() { removeFaceIndicators(); }
+    
+    function showFaceIndicators() {
+        removeFaceIndicators();
+        const indicators = [
+            { x: 100, y: 150, width: 120, height: 150 },
+            { x: 300, y: 180, width: 100, height: 130 },
+            { x: 450, y: 200, width: 90, height: 120 }
+        ];
+        indicators.forEach(indicator => {
+            const faceIndicator = document.createElement('div');
+            faceIndicator.className = 'face-indicator';
+            faceIndicator.style.cssText = `position: absolute; border: 3px solid var(--success); border-radius: 10px; animation: pulseFace 1.5s infinite; left: ${indicator.x}px; top: ${indicator.y}px; width: ${indicator.width}px; height: ${indicator.height}px;`;
+            document.querySelector('.webcam-preview').appendChild(faceIndicator);
+        });
+    }
+    
+    function removeFaceIndicators() {
+        document.querySelectorAll('.face-indicator').forEach(indicator => indicator.remove());
+    }
+    
+    function clearResults() {
+        results = [];
+        resultsCount.textContent = '0';
+        detectionResults.innerHTML = `<div class="empty-results"><i class="fas fa-camera"></i><p>هنوز عکسی گرفته نشده است</p><p class="text-muted small mt-2">برای شروع، دکمه عکس‌برداری را بزنید</p></div>`;
+        showNotification('نتایج پاک شدند', 'info');
+    }
+    
+    function playDetectionSound() {
+        if (document.getElementById('detectionSound').checked) {
+            const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ');
+            audio.play().catch(() => {});
+        }
+    }
+    
+    window.markAttendance = function(studentId) {
+        fetch(`/attendance/manual/${studentId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) showNotification('حضور با موفقیت ثبت شد', 'success');
+            else showNotification(data.message || 'خطا در ثبت حضور', 'error');
+        })
+        .catch(error => showNotification('خطا در ارتباط با سرور', 'error'));
+    };
+    
+    window.trackStudent = function(studentId) {
+        window.open(`{% url 'verifi:search_student' %}?student=${studentId}`, '_blank');
+    };
+    
+    captureBtn.addEventListener('click', capturePhoto);
+    recordBtn.addEventListener('click', toggleRecording);
+    clearResultsBtn.addEventListener('click', clearResults);
+    cameraSelect.addEventListener('change', function() {
+        showNotification(`دوربین ${this.options[this.selectedIndex].text} انتخاب شد`, 'info');
+    });
+    document.getElementById('sensitivity').addEventListener('input', function() {
+        showNotification(`حساسیت تشخیص به ${this.value} تنظیم شد`, 'info');
+    });
+    document.getElementById('multiFace').addEventListener('change', function() {
+        showNotification(this.checked ? 'تشخیص چند چهره فعال شد' : 'تشخیص چند چهره غیرفعال شد', this.checked ? 'success' : 'warning');
+    });
+    document.getElementById('photoQuality').addEventListener('change', function() {
+        showNotification(`کیفیت عکس به ${this.options[this.selectedIndex].text} تنظیم شد`, 'info');
+    });
+    document.getElementById('captureDelay').addEventListener('change', function() {
+        showNotification(`تأخیر عکس‌برداری به ${this.options[this.selectedIndex].text} تنظیم شد`, 'info');
+    });
+});
+
+function showNotification(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} animate__animated animate__fadeIn`;
+    alert.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️'}</span> ${message}`;
+    const messagesContainer = document.querySelector('.messages') || document.createElement('div');
+    if (!document.querySelector('.messages')) {
+        messagesContainer.className = 'messages';
+        document.querySelector('.content').prepend(messagesContainer);
+    }
+    messagesContainer.prepend(alert);
+    setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

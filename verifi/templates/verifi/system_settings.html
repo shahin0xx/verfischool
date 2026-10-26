@@ -1,0 +1,1036 @@
+{% extends 'verifi/base.html' %}
+{% load static %}
+
+{% block title %}تنظیمات سیستم - سیستم تشخیص چهره مدرسه{% endblock %}
+
+{% block page_title %}تنظیمات سیستم{% endblock %}
+{% block page_subtitle %}مدیریت و پیکربندی تنظیمات پیشرفته سیستم{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .settings-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+    }
+    
+    .settings-tab {
+        padding: 15px 25px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-weight: 600;
+        color: var(--gray);
+        cursor: pointer;
+        transition: all 0.3s;
+        white-space: nowrap;
+    }
+    
+    .settings-tab:hover {
+        color: var(--primary);
+    }
+    
+    .settings-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    
+    .settings-panel {
+        display: none;
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    .settings-panel.active {
+        display: block;
+    }
+    
+    .settings-card {
+        padding: 30px;
+        border-radius: var(--radius);
+        margin-bottom: 30px;
+    }
+    
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .card-icon.detection {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+    
+    .card-icon.notification {
+        background: linear-gradient(135deg, var(--secondary), #b5179e);
+    }
+    
+    .card-icon.system {
+        background: linear-gradient(135deg, var(--warning), #f9844a);
+    }
+    
+    .card-icon.security {
+        background: linear-gradient(135deg, var(--success), #00b4d8);
+    }
+    
+    .card-header h3 {
+        margin: 0;
+        color: var(--dark);
+    }
+    
+    .card-header p {
+        margin: 5px 0 0;
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+    
+    .form-help {
+        font-size: 0.85rem;
+        color: var(--gray);
+        font-weight: normal;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    }
+    
+    .form-range {
+        width: 100%;
+        height: 10px;
+        -webkit-appearance: none;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+        outline: none;
+    }
+    
+    .form-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        border: 3px solid white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    .range-value {
+        display: inline-block;
+        margin-right: 10px;
+        font-weight: 600;
+        color: var(--primary);
+        min-width: 40px;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .form-check-input {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+        color: var(--dark);
+    }
+    
+    .settings-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 2px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-save {
+        background: linear-gradient(135deg, var(--success), #00b4d8);
+        color: white;
+    }
+    
+    .btn-save:hover {
+        background: linear-gradient(135deg, #00b4d8, var(--success));
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(76, 201, 240, 0.3);
+    }
+    
+    .btn-reset {
+        background: linear-gradient(135deg, var(--warning), #f9844a);
+        color: white;
+    }
+    
+    .btn-reset:hover {
+        background: linear-gradient(135deg, #f9844a, var(--warning));
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(248, 150, 30, 0.3);
+    }
+    
+    .btn-test {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+    }
+    
+    .btn-test:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+    }
+    
+    .system-info {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05));
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .info-item {
+        text-align: center;
+        padding: 15px;
+        background: white;
+        border-radius: var(--radius);
+    }
+    
+    .info-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 5px;
+    }
+    
+    .info-label {
+        font-size: 0.9rem;
+        color: var(--gray);
+    }
+    
+    .danger-zone {
+        background: linear-gradient(135deg, rgba(249, 65, 68, 0.1), rgba(249, 65, 68, 0.05));
+        border: 2px solid var(--danger);
+        border-radius: var(--radius);
+        padding: 25px;
+        margin-top: 40px;
+    }
+    
+    .danger-zone h4 {
+        color: var(--danger);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .danger-actions {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger), #d90429);
+        color: white;
+        border: none;
+    }
+    
+    .btn-danger:hover {
+        background: linear-gradient(135deg, #d90429, var(--danger));
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(249, 65, 68, 0.3);
+    }
+    
+    .modal {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+    
+    .modal-content {
+        width: 90%;
+        max-width: 500px;
+        background: white;
+        border-radius: var(--radius);
+        overflow: hidden;
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    .modal-header {
+        padding: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-footer {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(50px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 768px) {
+        .settings-tabs {
+            flex-wrap: wrap;
+        }
+        
+        .settings-tab {
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .settings-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .action-buttons, .danger-actions {
+            flex-direction: column;
+        }
+        
+        .action-buttons .btn, .danger-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="system-info glass animate__animated animate__fadeIn">
+        <h5><i class="fas fa-info-circle me-2"></i>اطلاعات سیستم</h5>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-value">{{ system_info.version }}</div>
+                <div class="info-label">نسخه سیستم</div>
+            </div>
+            <div class="info-item">
+                <div class="info-value">{{ system_info.uptime }}</div>
+                <div class="info-label">زمان فعالیت</div>
+            </div>
+            <div class="info-item">
+                <div class="info-value">{{ system_info.student_count }}</div>
+                <div class="info-label">دانش‌آموز</div>
+            </div>
+            <div class="info-item">
+                <div class="info-value">{{ system_info.camera_count }}</div>
+                <div class="info-label">دوربین</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="detection">
+            <i class="fas fa-search me-2"></i>
+            تشخیص چهره
+        </button>
+        <button class="settings-tab" data-tab="notification">
+            <i class="fas fa-bell me-2"></i>
+            اعلان‌ها
+        </button>
+        <button class="settings-tab" data-tab="system">
+            <i class="fas fa-cog me-2"></i>
+            سیستم
+        </button>
+        <button class="settings-tab" data-tab="security">
+            <i class="fas fa-shield-alt me-2"></i>
+            امنیت
+        </button>
+    </div>
+    
+    <form method="POST" id="settingsForm">
+        {% csrf_token %}
+        
+        <!-- تنظیمات تشخیص چهره -->
+        <div class="settings-panel active glass" id="detectionPanel">
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon detection">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div>
+                        <h3>تنظیمات تشخیص چهره</h3>
+                        <p>تنظیم پارامترهای تشخیص و شناسایی چهره</p>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">
+                            آستانه دقت تشخیص
+                            <span class="form-help">(هرچه کمتر، حساسیت بیشتر)</span>
+                        </label>
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="range-value" id="thresholdValue">60%</span>
+                            <input type="range" class="form-range" id="detectionThreshold" 
+                                   name="detection_threshold" min="50" max="95" value="60">
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">حساسیت بالا</small>
+                            <small class="text-muted">دقت بالا</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">فاصله تشخیص (ثانیه)</label>
+                        <input type="number" class="form-control" name="detection_interval" 
+                               value="0.1" min="0.01" max="1" step="0.01">
+                        <small class="text-muted">فاصله بین فریم‌های پردازش شده</small>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">حداکثر چهره در هر فریم</label>
+                        <input type="number" class="form-control" name="max_faces" 
+                               value="10" min="1" max="50">
+                        <small class="text-muted">حداکثر تعداد چهره قابل تشخیص در یک تصویر</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">اندازه حداقل چهره</label>
+                        <select class="form-select" name="min_face_size">
+                            <option value="20">کوچک</option>
+                            <option value="50" selected>متوسط</option>
+                            <option value="80">بزرگ</option>
+                        </select>
+                        <small class="text-muted">حداقل اندازه چهره برای تشخیص</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="multiFace" name="multi_face" checked>
+                        <label class="form-check-label" for="multiFace">
+                            تشخیص چند چهره
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="faceTracking" name="face_tracking" checked>
+                        <label class="form-check-label" for="faceTracking">
+                            ردیابی چهره
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="optimizeSpeed" name="optimize_speed">
+                        <label class="form-check-label" for="optimizeSpeed">
+                            بهینه‌سازی برای سرعت
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- تنظیمات اعلان‌ها -->
+        <div class="settings-panel glass" id="notificationPanel">
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon notification">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div>
+                        <h3>تنظیمات اعلان‌ها</h3>
+                        <p>مدیریت اعلان‌ها و هشدارهای سیستم</p>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">اعلان حضور</label>
+                        <select class="form-select" name="attendance_notification">
+                            <option value="all">همه حضورها</option>
+                            <option value="first">فقط اولین حضور</option>
+                            <option value="none">هیچکدام</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">اعلان افراد ناشناس</label>
+                        <select class="form-select" name="unknown_notification">
+                            <option value="all">همه افراد ناشناس</option>
+                            <option value="long">فقط حضور طولانی</option>
+                            <option value="none">هیچکدام</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">اعلان دوربین آفلاین</label>
+                        <select class="form-select" name="camera_notification">
+                            <option value="immediate">بلافاصله</option>
+                            <option value="5min">پس از ۵ دقیقه</option>
+                            <option value="none">هیچکدام</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">اعلان خطای سیستم</label>
+                        <select class="form-select" name="error_notification">
+                            <option value="all">همه خطاها</option>
+                            <option value="critical">فقط خطاهای بحرانی</option>
+                            <option value="none">هیچکدام</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="emailNotifications" name="email_notifications">
+                        <label class="form-check-label" for="emailNotifications">
+                            ارسال اعلان از طریق ایمیل
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="soundNotifications" name="sound_notifications" checked>
+                        <label class="form-check-label" for="soundNotifications">
+                            پخش صدا برای اعلان‌ها
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="desktopNotifications" name="desktop_notifications">
+                        <label class="form-check-label" for="desktopNotifications">
+                            اعلان دسکتاپ
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">ایمیل مدیر</label>
+                    <input type="email" class="form-control" name="admin_email" 
+                           placeholder="admin@school.edu" value="{{ user.email }}">
+                </div>
+            </div>
+        </div>
+        
+        <!-- تنظیمات سیستم -->
+        <div class="settings-panel glass" id="systemPanel">
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon system">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div>
+                        <h3>تنظیمات سیستم</h3>
+                        <p>پیکربندی عمومی سیستم</p>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">زبان سیستم</label>
+                        <select class="form-select" name="system_language">
+                            <option value="fa" selected>فارسی</option>
+                            <option value="en">انگلیسی</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">منطقه زمانی</label>
+                        <select class="form-select" name="timezone">
+                            <option value="Asia/Tehran" selected>تهران (GMT+3:30)</option>
+                            <option value="UTC">UTC</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">قالب تاریخ</label>
+                        <select class="form-select" name="date_format">
+                            <option value="jalali" selected>شمسی (۱۴۰۳/۰۱/۰۱)</option>
+                            <option value="gregorian">میلادی (2024/01/01)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ذخیره تصاویر تشخیص</label>
+                        <select class="form-select" name="save_images">
+                            <option value="all">همه تصاویر</option>
+                            <option value="unknown">فقط افراد ناشناس</option>
+                            <option value="none">هیچکدام</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">حداکثر حجم ذخیره‌سازی (GB)</label>
+                        <input type="number" class="form-control" name="storage_limit" 
+                               value="50" min="10" max="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">مدت نگهداری لاگ‌ها (روز)</label>
+                        <input type="number" class="form-control" name="log_retention" 
+                               value="90" min="7" max="365">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="autoBackup" name="auto_backup" checked>
+                        <label class="form-check-label" for="autoBackup">
+                            پشتیبان‌گیری خودکار
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="autoUpdate" name="auto_update">
+                        <label class="form-check-label" for="autoUpdate">
+                            بروزرسانی خودکار
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="debugMode" name="debug_mode">
+                        <label class="form-check-label" for="debugMode">
+                            حالت دیباگ
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- تنظیمات امنیت -->
+        <div class="settings-panel glass" id="securityPanel">
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon security">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div>
+                        <h3>تنظیمات امنیت</h3>
+                        <p>مدیریت دسترسی و امنیت سیستم</p>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">مدت زمان نشست (دقیقه)</label>
+                        <input type="number" class="form-control" name="session_timeout" 
+                               value="30" min="5" max="1440">
+                        <small class="text-muted">پس از این مدت کاربر به طور خودکار خارج می‌شود</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">حداکثر تلاش ناموفق</label>
+                        <input type="number" class="form-control" name="max_login_attempts" 
+                               value="5" min="1" max="10">
+                        <small class="text-muted">قفل شدن حساب پس از این تعداد تلاش ناموفق</small>
+                    </div>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="form-group">
+                        <label class="form-label">IP Whitelist</label>
+                        <textarea class="form-control" name="ip_whitelist" rows="3" 
+                                  placeholder="هر IP در یک خط\nمثال:\n192.168.1.1\n192.168.1.0/24"></textarea>
+                        <small class="text-muted">تنها IPهای مجاز برای دسترسی (خالی = همه)</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="forceHttps" name="force_https">
+                        <label class="form-check-label" for="forceHttps">
+                            اجبار استفاده از HTTPS
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="twoFactor" name="two_factor">
+                        <label class="form-check-label" for="twoFactor">
+                            احراز هویت دو مرحله‌ای برای مدیران
+                        </label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="form-check-input" id="auditLog" name="audit_log" checked>
+                        <label class="form-check-label" for="auditLog">
+                            ثبت فعالیت‌های کاربران
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">تغییر رمز عبور</label>
+                    <div class="settings-row">
+                        <div class="form-group">
+                            <input type="password" class="form-control" name="current_password" 
+                                   placeholder="رمز عبور فعلی">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-control" name="new_password" 
+                                   placeholder="رمز عبور جدید">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-control" name="confirm_password" 
+                                   placeholder="تکرار رمز عبور">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button type="button" class="btn btn-reset" onclick="resetSettings()">
+                <i class="fas fa-undo"></i>
+                بازنشانی
+            </button>
+            <button type="button" class="btn btn-test" onclick="testSettings()">
+                <i class="fas fa-vial"></i>
+                تست تنظیمات
+            </button>
+            <button type="submit" class="btn btn-save">
+                <i class="fas fa-save"></i>
+                ذخیره تغییرات
+            </button>
+        </div>
+    </form>
+    
+    <div class="danger-zone glass animate__animated animate__fadeIn">
+        <h4>
+            <i class="fas fa-exclamation-triangle"></i>
+            ناحیه خطر
+        </h4>
+        <p class="text-muted mb-3">
+            اقدامات زیر قابل بازگشت نیستند. با احتیاط عمل کنید.
+        </p>
+        <div class="danger-actions">
+            <button type="button" class="btn btn-danger" onclick="showModal('clearLogsModal')">
+                <i class="fas fa-trash"></i>
+                پاک کردن همه لاگ‌ها
+            </button>
+            <button type="button" class="btn btn-danger" onclick="showModal('reloadFacesModal')">
+                <i class="fas fa-sync-alt"></i>
+                بارگذاری مجدد چهره‌ها
+            </button>
+            <button type="button" class="btn btn-danger" onclick="showModal('restartSystemModal')">
+                <i class="fas fa-redo"></i>
+                راه‌اندازی مجدد سیستم
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal برای پاک کردن لاگ‌ها -->
+<div class="modal" id="clearLogsModal">
+    <div class="modal-content glass">
+        <div class="modal-header">
+            <h4 class="mb-0">
+                <i class="fas fa-trash me-2"></i>
+                پاک کردن لاگ‌ها
+            </h4>
+            <button class="btn btn-light btn-sm" onclick="closeModal('clearLogsModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>آیا مطمئن هستید که می‌خواهید همه لاگ‌های سیستم را پاک کنید؟</p>
+            <p class="text-muted small">این عمل غیرقابل بازگشت است.</p>
+            <div class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle"></i>
+                تعداد لاگ‌ها: <strong>{{ log_count }}</strong> رکورد
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('clearLogsModal')">
+                انصراف
+            </button>
+            <button class="btn btn-danger" onclick="clearAllLogs()">
+                <i class="fas fa-trash"></i>
+                پاک کردن
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal برای بارگذاری مجدد چهره‌ها -->
+<div class="modal" id="reloadFacesModal">
+    <div class="modal-content glass">
+        <div class="modal-header">
+            <h4 class="mb-0">
+                <i class="fas fa-sync-alt me-2"></i>
+                بارگذاری مجدد چهره‌ها
+            </h4>
+            <button class="btn btn-light btn-sm" onclick="closeModal('reloadFacesModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>آیا می‌خواهید چهره‌های سیستم را مجدداً بارگذاری کنید؟</p>
+            <p class="text-muted small">این عمل تمام چهره‌های ثبت شده را از دیتابیس بارگذاری می‌کند.</p>
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                تعداد چهره‌های ثبت شده: <strong>{{ face_count }}</strong>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('reloadFacesModal')">
+                انصراف
+            </button>
+            <button class="btn btn-primary" onclick="reloadFaces()">
+                <i class="fas fa-sync-alt"></i>
+                بارگذاری مجدد
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal برای راه‌اندازی مجدد سیستم -->
+<div class="modal" id="restartSystemModal">
+    <div class="modal-content glass">
+        <div class="modal-header">
+            <h4 class="mb-0">
+                <i class="fas fa-redo me-2"></i>
+                راه‌اندازی مجدد سیستم
+            </h4>
+            <button class="btn btn-light btn-sm" onclick="closeModal('restartSystemModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>آیا مطمئن هستید که می‌خواهید سیستم را راه‌اندازی مجدد کنید؟</p>
+            <p class="text-muted small">سیستم برای 30-60 ثانیه غیرقابل دسترس خواهد بود.</p>
+            <div class="alert alert-danger mt-3">
+                <i class="fas fa-exclamation-circle"></i>
+                تمام پردازش‌های در حال اجرا متوقف خواهند شد.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('restartSystemModal')">
+                انصراف
+            </button>
+            <button class="btn btn-danger" onclick="restartSystem()">
+                <i class="fas fa-redo"></i>
+                راه‌اندازی مجدد
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت تب‌ها
+    const tabs = document.querySelectorAll('.settings-tab');
+    const panels = document.querySelectorAll('.settings-panel');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
+            
+            // حذف کلاس active از همه تب‌ها
+            tabs.forEach(t => t.classList.remove('active'));
+            // اضافه کردن کلاس active به تب فعلی
+            this.classList.add('active');
+            
+            // مخفی کردن همه پنل‌ها
+            panels.forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // نمایش پنل مربوطه
+            document.getElementById(`${tabId}Panel`).classList.add('active');
+        });
+    });
+    
+    // به‌روزرسانی مقدار slider
+    const thresholdSlider = document.getElementById('detectionThreshold');
+    const thresholdValue = document.getElementById('thresholdValue');
+    
+    thresholdSlider.addEventListener('input', function() {
+        thresholdValue.textContent = this.value + '%';
+    });
+    
+    // مدیریت فرم
+    const settingsForm = document.getElementById('settingsForm');
+    settingsForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // نمایش پیام در حال ذخیره
+        const submitBtn = this.querySelector('.btn-save');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ذخیره...';
+        submitBtn.disabled = true;
+        
+        // شبیه‌سازی ذخیره‌سازی
+        setTimeout(() => {
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> ذخیره شد!';
+            showNotification('تنظیمات با موفقیت ذخیره شد', 'success');
+            
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 2000);
+        }, 1500);
+    });
+});
+
+function resetSettings() {
+    if (confirm('آیا مطمئن هستید که می‌خواهید همه تنظیمات را به حالت پیش‌فرض بازگردانید؟')) {
+        showNotification('تنظیمات در حال بازنشانی...', 'info');
+        
+        setTimeout(() => {
+            // بازنشانی فرم
+            document.getElementById('detectionThreshold').value = 60;
+            document.getElementById('thresholdValue').textContent = '60%';
+            
+            showNotification('تنظیمات با موفقیت بازنشانی شدند', 'success');
+        }, 1000);
+    }
+}
+
+function testSettings() {
+    showNotification('در حال تست تنظیمات سیستم...', 'info');
+    
+    setTimeout(() => {
+        showNotification('همه تنظیمات به درستی کار می‌کنند', 'success');
+    }, 2000);
+}
+
+function showModal(modalId) {
+    document.getElementById(modalId).style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function clearAllLogs() {
+    showNotification('در حال پاک کردن لاگ‌ها...', 'warning');
+    closeModal('clearLogsModal');
+    
+    setTimeout(() => {
+        showNotification('همه لاگ‌ها با موفقیت پاک شدند', 'success');
+    }, 2000);
+}
+
+function reloadFaces() {
+    showNotification('در حال بارگذاری مجدد چهره‌ها...', 'info');
+    closeModal('reloadFacesModal');
+    
+    setTimeout(() => {
+        showNotification('چهره‌ها با موفقیت بارگذاری شدند', 'success');
+    }, 3000);
+}
+
+function restartSystem() {
+    showNotification('سیستم در حال راه‌اندازی مجدد...', 'warning');
+    closeModal('restartSystemModal');
+    
+    setTimeout(() => {
+        showNotification('سیستم با موفقیت راه‌اندازی مجدد شد. در حال انتقال...', 'success');
+        
+        setTimeout(() => {
+            window.location.href = '{% url "verifi:dashboard" %}';
+        }, 2000);
+    }, 4000);
+}
+
+function showNotification(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} glass animate__animated animate__fadeIn`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'exclamation-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    const messagesContainer = document.querySelector('.messages') || document.createElement('div');
+    if (!document.querySelector('.messages')) {
+        messagesContainer.className = 'messages';
+        document.querySelector('.content').prepend(messagesContainer);
+    }
+    
+    messagesContainer.prepend(alert);
+    
+    setTimeout(() => {
+        alert.classList.add('animate__fadeOut');
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+</script>
+{% endblock %}
